@@ -1,10 +1,81 @@
 import 'package:flutter/material.dart';
+import 'challenge_detail_page.dart';
 
 class RecordPage extends StatelessWidget {
   const RecordPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // 模拟数据
+    final Map<String, dynamic> summaryStat = {
+      'total_challenges': 156,
+      'total_time': '89小时',
+      'weekly_time': '12小时',
+    };
+
+    final List<Map<String, dynamic>> exams = [
+      {
+        'id': '123ragdsg',
+        'subject': '物理',
+        'cost_time': '25分钟',
+        'finish_time': DateTime.now().subtract(const Duration(days: 1)),
+      },
+      {
+        'id': '456hjkdf',
+        'subject': '数学',
+        'cost_time': '30分钟',
+        'finish_time': DateTime.now().subtract(const Duration(days: 2)),
+      },
+      {
+        'id': '789lmnop',
+        'subject': '英语',
+        'cost_time': '20分钟',
+        'finish_time': DateTime.now().subtract(const Duration(days: 3)),
+      },
+      {
+        'id': '012qrstu',
+        'subject': '历史',
+        'cost_time': '35分钟',
+        'finish_time': DateTime.now().subtract(const Duration(days: 4)),
+      },
+      {
+        'id': '345vwxyz',
+        'subject': '物理',
+        'cost_time': '28分钟',
+        'finish_time': DateTime.now().subtract(const Duration(days: 5)),
+      },
+      {
+        'id': '678abcde',
+        'subject': '数学',
+        'cost_time': '32分钟',
+        'finish_time': DateTime.now().subtract(const Duration(days: 6)),
+      },
+      {
+        'id': '901fghij',
+        'subject': '英语',
+        'cost_time': '18分钟',
+        'finish_time': DateTime.now().subtract(const Duration(days: 7)),
+      },
+      {
+        'id': '234klmno',
+        'subject': '历史',
+        'cost_time': '40分钟',
+        'finish_time': DateTime.now().subtract(const Duration(days: 8)),
+      },
+      {
+        'id': '567pqrst',
+        'subject': '物理',
+        'cost_time': '22分钟',
+        'finish_time': DateTime.now().subtract(const Duration(days: 9)),
+      },
+      {
+        'id': '890uvwxy',
+        'subject': '数学',
+        'cost_time': '45分钟',
+        'finish_time': DateTime.now().subtract(const Duration(days: 10)),
+      },
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('学习记录'),
@@ -33,16 +104,16 @@ class RecordPage extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildStatItem('完成挑战', '156', Icons.check_circle),
-                        _buildStatItem('总用时', '89小时', Icons.timer),
+                        _buildStatItem('总完成挑战111', '${summaryStat['total_challenges']}', Icons.check_circle),
+                        _buildStatItem('总用时', summaryStat['total_time'], Icons.timer),
                       ],
                     ),
                     const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildStatItem('连续天数', '12天', Icons.calendar_today),
-                        _buildStatItem('平均时长', '34分钟', Icons.av_timer),
+                        _buildStatItem('近一周用时', summaryStat['weekly_time'], Icons.av_timer),
+                        const SizedBox(width: 80), // 占位，保持布局对称
                       ],
                     ),
                   ],
@@ -60,27 +131,38 @@ class RecordPage extends StatelessWidget {
             const SizedBox(height: 15),
             Expanded(
               child: ListView.builder(
-                itemCount: 10,
+                itemCount: exams.length,
                 itemBuilder: (context, index) {
+                  final exam = exams[index];
                   return Card(
                     margin: const EdgeInsets.only(bottom: 10),
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: Colors.blue.shade100,
                         child: Icon(
-                          _getSubjectIcon(index % 4),
+                          _getSubjectIcon(exam['subject']),
                           color: Colors.blue,
                         ),
                       ),
-                      title: Text('${_getSubjectName(index % 4)}挑战 #${1000 - index}'),
-                      subtitle: Text('完成时间: ${DateTime.now().subtract(Duration(days: index)).toString().substring(0, 16)}'),
+                      title: Text('${exam['subject']}挑战 #${1000 - index}'),
+                      subtitle: Text('完成时间: ${exam['finish_time'].toString().substring(0, 16)}'),
                       trailing: Text(
-                        '${25 + index}分钟',
+                        exam['cost_time'],
                         style: const TextStyle(
                           color: Colors.green,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChallengeDetailPage(
+                              challengeId: exam['id'],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },
@@ -116,23 +198,13 @@ class RecordPage extends StatelessWidget {
     );
   }
 
-  IconData _getSubjectIcon(int index) {
-    switch (index) {
-      case 0: return Icons.science;
-      case 1: return Icons.calculate;
-      case 2: return Icons.language;
-      case 3: return Icons.history;
+  IconData _getSubjectIcon(String subject) {
+    switch (subject) {
+      case '物理': return Icons.science;
+      case '数学': return Icons.calculate;
+      case '英语': return Icons.language;
+      case '历史': return Icons.history;
       default: return Icons.book;
-    }
-  }
-
-  String _getSubjectName(int index) {
-    switch (index) {
-      case 0: return '物理';
-      case 1: return '数学';
-      case 2: return '英语';
-      case 3: return '历史';
-      default: return '其他';
     }
   }
 } 
