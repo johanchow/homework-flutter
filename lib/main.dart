@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'record_page.dart';
 import 'challenge_page.dart';
 import 'ai_page.dart';
+import 'pages/login_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,7 +19,11 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const MainScreen(),
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/main': (context) => const MainScreen(),
+      },
     );
   }
 }
