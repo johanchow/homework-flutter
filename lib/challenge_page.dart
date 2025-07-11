@@ -1,240 +1,50 @@
 import 'package:flutter/material.dart';
+import 'services/api_service.dart';
 import 'challenge_detail_page.dart';
 
-class ChallengePage extends StatelessWidget {
+class ChallengePage extends StatefulWidget {
   const ChallengePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // 模拟数据
-    final List<Map<String, dynamic>> challenges = [
-      {
-        'id': '1001',
-        'subject': '物理',
-        'challenge_id': '1001',
-        'start_time': '09:00',
-        'expected_duration': '30分钟',
-        'status': 'pending', // pending, ongoing, completed
-      },
-      {
-        'id': '1002',
-        'subject': '数学',
-        'challenge_id': '1002',
-        'start_time': '10:30',
-        'expected_duration': '45分钟',
-        'status': 'ongoing',
-      },
-      {
-        'id': '1003',
-        'subject': '英语',
-        'challenge_id': '1003',
-        'start_time': '14:00',
-        'expected_duration': '25分钟',
-        'status': 'completed',
-      },
-      {
-        'id': '1004',
-        'subject': '历史',
-        'challenge_id': '1004',
-        'start_time': '16:00',
-        'expected_duration': '35分钟',
-        'status': 'pending',
-      },
-      {
-        'id': '1005',
-        'subject': '物理',
-        'challenge_id': '1005',
-        'start_time': '19:30',
-        'expected_duration': '40分钟',
-        'status': 'pending',
-      },
-    ];
+  State<ChallengePage> createState() => _ChallengePageState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('今日挑战'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '今日待完成',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: ListView.builder(
-                itemCount: challenges.length,
-                itemBuilder: (context, index) {
-                  final challenge = challenges[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 15),
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ChallengeDetailPage(
-                              challengeId: challenge['id'],
-                            ),
-                          ),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: _getSubjectColor(challenge['subject']),
-                                  child: Icon(
-                                    _getSubjectIcon(challenge['subject']),
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        challenge['subject'],
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        '挑战 #${challenge['challenge_id']}',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                _buildStatusChip(challenge['status']),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Icon(Icons.access_time, size: 16, color: Colors.grey.shade600),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '开始时间: ${challenge['start_time']}',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                                const SizedBox(width: 20),
-                                Icon(Icons.timer, size: 16, color: Colors.grey.shade600),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '预计时长: ${challenge['expected_duration']}',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  // 根据状态执行不同操作
-                                  switch (challenge['status']) {
-                                    case 'pending':
-                                      // 开始挑战
-                                      break;
-                                    case 'ongoing':
-                                      // 继续挑战
-                                      break;
-                                    case 'completed':
-                                      // 查看结果
-                                      break;
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _getSubjectColor(challenge['subject']),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                ),
-                                child: Text(_getButtonText(challenge['status'])),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+class _ChallengePageState extends State<ChallengePage> {
+  List<Map<String, dynamic>> _challenges = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
   }
 
-  Widget _buildStatusChip(String status) {
-    String statusText;
-    Color color;
-    
-    switch (status) {
-      case 'pending':
-        statusText = '待开始';
-        color = Colors.orange;
-        break;
-      case 'ongoing':
-        statusText = '进行中';
-        color = Colors.blue;
-        break;
-      case 'completed':
-        statusText = '已完成';
-        color = Colors.green;
-        break;
-      default:
-        statusText = '待开始';
-        color = Colors.orange;
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final challenges = await ApiService.getTodayChallenges();
+      setState(() {
+        _challenges = challenges;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ApiService.showError(context, e.toString());
+      }
     }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color),
-      ),
-      child: Text(
-        statusText,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
   }
 
-  String _getButtonText(String status) {
+  String _getStatusText(String status) {
     switch (status) {
       case 'pending':
         return '开始挑战';
-      case 'ongoing':
+      case 'in_progress':
         return '继续挑战';
       case 'completed':
         return '查看';
@@ -243,23 +53,162 @@ class ChallengePage extends StatelessWidget {
     }
   }
 
-  Color _getSubjectColor(String subject) {
-    switch (subject) {
-      case '物理': return Colors.red;
-      case '数学': return Colors.blue;
-      case '英语': return Colors.green;
-      case '历史': return Colors.purple;
-      default: return Colors.orange;
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return Colors.blue;
+      case 'in_progress':
+        return Colors.orange;
+      case 'completed':
+        return Colors.green;
+      default:
+        return Colors.blue;
     }
   }
 
-  IconData _getSubjectIcon(String subject) {
+  Color _getSubjectColor(String? subject) {
     switch (subject) {
-      case '物理': return Icons.science;
-      case '数学': return Icons.calculate;
-      case '英语': return Icons.language;
-      case '历史': return Icons.history;
-      default: return Icons.book;
+      case '数学':
+        return Colors.blue;
+      case '英语':
+        return Colors.green;
+      case '物理':
+        return Colors.orange;
+      case '化学':
+        return Colors.purple;
+      default:
+        return Colors.grey;
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('今日挑战'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadData,
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadData,
+              child: _challenges.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.assignment_outlined,
+                            size: 64,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            '今日暂无挑战',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16.0),
+                      itemCount: _challenges.length,
+                      itemBuilder: (context, index) {
+                        final challenge = _challenges[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 16.0),
+                          elevation: 4,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: _getSubjectColor(challenge['subject']),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          challenge['subject'] ?? '',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            challenge['title'] ?? '',
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '开始时间: ${challenge['start_time']}',
+                                            style: const TextStyle(
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          Text(
+                                            '预计时长: ${challenge['duration']}分钟',
+                                            style: const TextStyle(
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => ChallengeDetailPage(
+                                              challengeId: challenge['id'],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _getStatusColor(challenge['status']),
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      child: Text(_getStatusText(challenge['status'])),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+    );
   }
 } 

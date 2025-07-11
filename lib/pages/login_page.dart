@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../utils/http_client.dart';
+import '../services/api_service.dart';
+import '../utils/storage_manager.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -44,12 +45,12 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _sendVerificationCode() async {
     if (_phoneController.text.isEmpty) {
-      HttpClient.showError(context, '请输入手机号');
+      ApiService.showError(context, '请输入手机号');
       return;
     }
 
     if (!RegExp(r'^1[3-9]\d{9}$').hasMatch(_phoneController.text)) {
-      HttpClient.showError(context, '请输入正确的手机号');
+      ApiService.showError(context, '请输入正确的手机号');
       return;
     }
 
@@ -58,24 +59,20 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // 模拟发送验证码
-      await Future.delayed(const Duration(seconds: 1));
+      final success = await ApiService.sendVerificationCode(_phoneController.text);
       
-      // 模拟API调用
-      // await HttpClient.post('/auth/send-code', body: {
-      //   'phone': _phoneController.text,
-      // });
-
-      HttpClient.showSuccess(context, '验证码已发送');
-      
-      // 开始倒计时
-      setState(() {
-        _countdown = 60;
-      });
-      
-      _startCountdown();
+      if (success) {
+        ApiService.showSuccess(context, '验证码已发送');
+        
+        // 开始倒计时
+        setState(() {
+          _countdown = 60;
+        });
+        
+        _startCountdown();
+      }
     } catch (e) {
-      HttpClient.showError(context, e.toString());
+      ApiService.showError(context, e.toString());
     } finally {
       setState(() {
         _isLoading = false;
@@ -106,37 +103,32 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      Map<String, dynamic> loginData;
+      Map<String, dynamic> response;
       
       if (_isPasswordLogin) {
-        loginData = {
-          'username': _usernameController.text,
-          'password': _passwordController.text,
-          'login_type': 'password',
-        };
+        response = await ApiService.loginWithPassword(
+          _usernameController.text,
+          _passwordController.text,
+        );
       } else {
-        loginData = {
-          'phone': _phoneController.text,
-          'code': _codeController.text,
-          'login_type': 'sms',
-        };
+        response = await ApiService.loginWithSms(
+          _phoneController.text,
+          _codeController.text,
+        );
       }
 
-      // 模拟API调用
-      await Future.delayed(const Duration(seconds: 1));
+      // 保存token和用户信息
+      await StorageManager.saveToken(response['token']);
+      await StorageManager.saveUserInfo(response['user']);
       
-      // 实际API调用
-      // final response = await HttpClient.post('/auth/login', body: loginData);
-      
-      // 模拟成功响应
-      HttpClient.showSuccess(context, '登录成功');
+      ApiService.showSuccess(context, '登录成功');
       
       // 登录成功后跳转到主页面
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/main');
       }
     } catch (e) {
-      HttpClient.showError(context, e.toString());
+      ApiService.showError(context, e.toString());
     } finally {
       setState(() {
         _isLoading = false;

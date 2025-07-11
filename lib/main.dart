@@ -3,6 +3,7 @@ import 'record_page.dart';
 import 'challenge_page.dart';
 import 'ai_page.dart';
 import 'pages/login_page.dart';
+import 'utils/storage_manager.dart';
 
 void main() {
   runApp(const MyApp());
@@ -19,12 +20,51 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      initialRoute: '/login',
+      home: const AuthWrapper(),
       routes: {
         '/login': (context) => const LoginPage(),
         '/main': (context) => const MainScreen(),
       },
     );
+  }
+}
+
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _isLoading = true;
+  bool _isLoggedIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final isLoggedIn = await StorageManager.isLoggedIn();
+    setState(() {
+      _isLoggedIn = isLoggedIn;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return _isLoggedIn ? const MainScreen() : const LoginPage();
   }
 }
 
