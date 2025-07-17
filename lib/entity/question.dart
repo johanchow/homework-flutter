@@ -42,7 +42,7 @@ class Question {
       title: json['title'] ?? json['content'] ?? '',
       answer: json['answer'] ?? '',
       subject: json['subject'] ?? '',
-      type: QuestionType.values.firstWhere((e) => e.name == json['type']),
+      type: _parseQuestionType(json['type']),
       attachments: _parseStringList(json['attachments']),
       options: _parseStringList(json['options']),
       images: _parseStringList(json['images']),
@@ -58,6 +58,16 @@ class Question {
       return value.map((item) => item.toString()).toList();
     }
     return [];
+  }
+
+  // 辅助方法：解析题目类型
+  static QuestionType _parseQuestionType(dynamic type) {
+    if (type == null) return QuestionType.qa;
+    try {
+      return QuestionType.values.firstWhere((e) => e.name == type);
+    } catch (e) {
+      return QuestionType.qa; // 默认返回简答题
+    }
   }
 
   // 转换 Question 实例为 Map<String, dynamic>

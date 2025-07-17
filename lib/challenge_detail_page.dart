@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/api_service.dart';
 import 'entity/question.dart';
-import 'component/TtsButton.dart';
+import 'component/tts_button.dart';
 
 class ChallengeDetailPage extends StatefulWidget {
   final int challengeId;
@@ -62,6 +62,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 题目头部
             Row(
               children: [
                 Container(
@@ -82,31 +83,42 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  question.type.label,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    question.type.label,
+                    style: const TextStyle(
+                      color: Colors.blue,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            
+            const SizedBox(height: 16),
+            // 题目内容
             Text(
               question.title,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
+                height: 1.4
               ),
             ),
             
+            const SizedBox(height: 16),
             // 渲染图片
             if (question.images.isNotEmpty) ...[
-              const SizedBox(height: 12),
               ...List.generate(
                 question.images.length,
                 (imageIndex) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
+                  padding: const EdgeInsets.only(bottom: 12.0),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
@@ -139,11 +151,10 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
             
             // 渲染文件附件
             if (question.attachments.isNotEmpty) ...[
-              const SizedBox(height: 12),
               ...List.generate(
                 question.attachments.length,
                 (attachmentIndex) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
+                  padding: const EdgeInsets.only(bottom: 12.0),
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -185,7 +196,6 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                         IconButton(
                           icon: const Icon(Icons.download),
                           onPressed: () {
-                            // 处理文件下载
                             ApiService.showSuccess(context, '开始下载文件');
                           },
                         ),
@@ -196,70 +206,154 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
               ),
             ],
             
-            // 渲染选择题选项
-            if (question.type.name == 'choice' && question.options.isNotEmpty) ...[
-              const SizedBox(height: 12),
+            // 渲染视频
+            if (question.videos.isNotEmpty) ...[
               ...List.generate(
-                question.options.length,
-                (optionIndex) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Row(
-                    children: [
-                      Radio<String>(
-                        value: question.options[optionIndex],
-                        groupValue: null,
-                        onChanged: (value) {
-                          // 处理选项选择
-                        },
-                      ),
-                      Expanded(
-                        child: Text(
-                          question.options[optionIndex],
-                          style: const TextStyle(fontSize: 14),
+                question.videos.length,
+                (videoIndex) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.video_file,
+                          color: Colors.red,
+                          size: 24,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '视频 ${videoIndex + 1}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Colors.red,
+                                ),
+                              ),
+                              Text(
+                                question.videos[videoIndex],
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.play_circle, color: Colors.red),
+                          onPressed: () {
+                            ApiService.showSuccess(context, '开始播放视频');
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ],
             
-            // 渲染填空题
-            if (question.type.name == 'fill') ...[
-              const SizedBox(height: 12),
-              TextField(
-                decoration: InputDecoration(
-                  hintText: '请输入答案',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ],
-            
-            // 渲染阅读题: 把answer属性每句话渲染类似button，点击后播放发音
-            if (question.type.name == 'reading') ...[
-              const SizedBox(height: 12),
-              TtsButtonWidget(sentence: question.answer),
-            ],
-
-            // 渲染简答题
-            if (question.type.name == 'qa') ...[
-              const SizedBox(height: 12),
-              TextField(
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: '请输入答案',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ],
+            const SizedBox(height: 16),
+            // 根据题目类型渲染不同的输入组件
+            _buildAnswerInput(question),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildAnswerInput(Question question) {
+    switch (question.type.name) {
+      case 'choice':
+        if (question.options.isNotEmpty) {
+          return Column(
+            children: List.generate(
+              question.options.length,
+              (optionIndex) => Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: RadioListTile<String>(
+                    value: question.options[optionIndex],
+                    groupValue: null,
+                    onChanged: (value) {
+                      // 处理选项选择
+                    },
+                    title: Text(
+                      question.options[optionIndex],
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+        break;
+        
+      case 'fill':
+        return TextField(
+          decoration: InputDecoration(
+            hintText: '请输入答案',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            contentPadding: const EdgeInsets.all(12),
+          ),
+        );
+        
+      case 'reading':
+        return TtsButtonWidget(sentence: question.answer);
+        
+      case 'qa':
+        return TextField(
+          maxLines: 4,
+          decoration: InputDecoration(
+            hintText: '请输入答案',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            contentPadding: const EdgeInsets.all(12),
+          ),
+        );
+        
+      case 'summary':
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue[200]!),
+          ),
+          child: const Text(
+            '总结题：请根据以上内容进行总结',
+            style: TextStyle(
+              color: Colors.blue,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        );
+        
+      default:
+        return const SizedBox.shrink();
+    }
+    
+    return const SizedBox.shrink();
   }
 
   @override
@@ -314,13 +408,12 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                     ],
                   ),
                 )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 挑战信息卡片
-                      Card(
+              : Column(
+                  children: [
+                    // 挑战信息卡片
+                    Container(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Card(
                         elevation: 4,
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -365,70 +458,92 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      
-                      // 题目列表
-                      const Text(
-                        '题目列表',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      if (_questions.isNotEmpty)
-                        ...List.generate(
-                          _questions.length,
-                          (index) => _buildQuestionCard(
-                            _questions[index],
-                            index,
-                          ),
-                        )
-                      else
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(32.0),
-                            child: Text(
-                              '暂无题目',
+                    ),
+                    
+                    // 题目列表
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '题目列表',
                               style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ),
-                        ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // 提交按钮
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // 处理提交逻辑
-                            ApiService.showSuccess(context, '提交成功！');
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text(
-                            '提交答案',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                            const SizedBox(height: 16),
+                            
+                            if (_questions.isNotEmpty)
+                              ...List.generate(
+                                _questions.length,
+                                (index) => _buildQuestionCard(
+                                  _questions[index],
+                                  index,
+                                ),
+                              )
+                            else
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(32.0),
+                                  child: Text(
+                                    '暂无题目',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            
+                            const SizedBox(height: 10),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+      bottomNavigationBar: _isLoading || _error != null
+          ? null
+          : Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.2),
+                    spreadRadius: 1,
+                    blurRadius: 5,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    ApiService.showSuccess(context, '提交成功！');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    '提交答案',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
+              ),
+            ),
     );
   }
 
