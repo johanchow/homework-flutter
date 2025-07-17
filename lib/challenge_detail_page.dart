@@ -4,6 +4,7 @@ import 'entity/question.dart';
 import 'component/record_sound.dart';
 import 'component/link_preview.dart';
 import 'component/video_player_widget.dart';
+import 'component/chat_box.dart';
 
 class ChallengeDetailPage extends StatefulWidget {
   final int challengeId;
@@ -97,6 +98,41 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                       color: Colors.blue,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                // 机器人图标
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.smart_toy,
+                      color: Colors.green,
+                      size: 20,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatBox(
+                            questionId: question.id,
+                            onQuestionLoaded: (loadedQuestion) {
+                              // 可以在这里处理题目加载完成后的逻辑
+                              // 题目详情已加载: ${loadedQuestion?.title}
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    tooltip: 'AI助手',
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(
+                      minWidth: 40,
+                      minHeight: 40,
                     ),
                   ),
                 ),
