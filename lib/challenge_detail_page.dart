@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/api_service.dart';
+import 'entity/question.dart';
+import 'component/TtsButton.dart';
 
 class ChallengeDetailPage extends StatefulWidget {
   final int challengeId;
@@ -12,6 +14,7 @@ class ChallengeDetailPage extends StatefulWidget {
 
 class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
   Map<String, dynamic> _challengeDetail = {};
+  List<Question> _questions = [];
   bool _isLoading = true;
   String? _error;
 
@@ -29,8 +32,18 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
 
     try {
       final detail = await ApiService.getChallengeDetail(widget.challengeId);
+      
+      // 将API数据转换为Question对象
+      List<Question> questions = [];
+      if (detail['questions'] != null) {
+        questions = (detail['questions'] as List)
+            .map((q) => Question.fromJson(q))
+            .toList();
+      }
+      
       setState(() {
         _challengeDetail = detail;
+        _questions = questions;
         _isLoading = false;
       });
     } catch (e) {
@@ -41,7 +54,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
     }
   }
 
-  Widget _buildQuestionCard(Map<String, dynamic> question, int index) {
+  Widget _buildQuestionCard(Question question, int index) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16.0),
       child: Padding(
@@ -70,7 +83,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  _getQuestionTypeText(question['type']),
+                  question.type.label,
                   style: const TextStyle(
                     color: Colors.grey,
                     fontSize: 12,
@@ -80,22 +93,120 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              question['content'] ?? '',
+              question.title,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
             ),
-            if (question['type'] == 'choice' && question['options'] != null) ...[
+            
+            // 渲染图片
+            if (question.images.isNotEmpty) ...[
               const SizedBox(height: 12),
               ...List.generate(
-                (question['options'] as List).length,
+                question.images.length,
+                (imageIndex) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      question.images[imageIndex],
+                      width: double.infinity,
+                      height: 200,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: double.infinity,
+                          height: 200,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.image_not_supported,
+                              size: 48,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            
+            // 渲染文件附件
+            if (question.attachments.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ...List.generate(
+                question.attachments.length,
+                (attachmentIndex) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.attach_file,
+                          color: Colors.blue,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '附件 ${attachmentIndex + 1}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                question.attachments[attachmentIndex],
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.download),
+                          onPressed: () {
+                            // 处理文件下载
+                            ApiService.showSuccess(context, '开始下载文件');
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            
+            // 渲染选择题选项
+            if (question.type.name == 'choice' && question.options.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ...List.generate(
+                question.options.length,
                 (optionIndex) => Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),
                   child: Row(
                     children: [
                       Radio<String>(
-                        value: (question['options'] as List)[optionIndex],
+                        value: question.options[optionIndex],
                         groupValue: null,
                         onChanged: (value) {
                           // 处理选项选择
@@ -103,7 +214,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                       ),
                       Expanded(
                         child: Text(
-                          (question['options'] as List)[optionIndex],
+                          question.options[optionIndex],
                           style: const TextStyle(fontSize: 14),
                         ),
                       ),
@@ -112,7 +223,9 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                 ),
               ),
             ],
-            if (question['type'] == 'fill') ...[
+            
+            // 渲染填空题
+            if (question.type.name == 'fill') ...[
               const SizedBox(height: 12),
               TextField(
                 decoration: InputDecoration(
@@ -123,7 +236,15 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                 ),
               ),
             ],
-            if (question['type'] == 'essay') ...[
+            
+            // 渲染阅读题: 把answer属性每句话渲染类似button，点击后播放发音
+            if (question.type.name == 'reading') ...[
+              const SizedBox(height: 12),
+              TtsButtonWidget(sentence: question.answer),
+            ],
+
+            // 渲染简答题
+            if (question.type.name == 'qa') ...[
               const SizedBox(height: 12),
               TextField(
                 maxLines: 4,
@@ -139,19 +260,6 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
         ),
       ),
     );
-  }
-
-  String _getQuestionTypeText(String? type) {
-    switch (type) {
-      case 'choice':
-        return '选择题';
-      case 'fill':
-        return '填空题';
-      case 'essay':
-        return '简答题';
-      default:
-        return '题目';
-    }
   }
 
   @override
@@ -269,11 +377,11 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                       ),
                       const SizedBox(height: 16),
                       
-                      if (_challengeDetail['questions'] != null)
+                      if (_questions.isNotEmpty)
                         ...List.generate(
-                          (_challengeDetail['questions'] as List).length,
+                          _questions.length,
                           (index) => _buildQuestionCard(
-                            _challengeDetail['questions'][index],
+                            _questions[index],
                             index,
                           ),
                         )
