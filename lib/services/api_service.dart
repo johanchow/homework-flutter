@@ -375,7 +375,7 @@ class ApiService {
               'id': 4,
               'type': 'reading',
               'title': '读一读',
-              'answer': 'This is a reading question',
+              'answer': 'This is a reading question \n I want to go to the park',
             },
             {
               'id': 5,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/api_service.dart';
 import 'entity/question.dart';
-import 'component/tts_button.dart';
+import 'component/record_sound.dart';
 
 class ChallengeDetailPage extends StatefulWidget {
   final int challengeId;
@@ -318,7 +318,12 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
         );
         
       case 'reading':
-        return TtsButtonWidget(sentence: question.answer);
+        return RecordSoundWidget(
+          onRecordingComplete: (String path) {
+            // 录音完成后的回调
+            ApiService.showSuccess(context, '录音完成！文件路径: $path');
+          },
+        );
         
       case 'qa':
         return TextField(
