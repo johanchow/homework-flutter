@@ -229,7 +229,7 @@ class _RecordSoundWidgetState extends State<RecordSoundWidget> {
           ),
           const SizedBox(height: 8),
           const Text(
-            '点击开始录音',
+            '语音作答',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,

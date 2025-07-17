@@ -20,6 +20,12 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
   List<Question> _questions = [];
   bool _isLoading = true;
   String? _error;
+  
+  // 答案状态管理
+  final Map<String, dynamic> _answers = {};
+  final Map<String, String> _selectedChoices = {};
+  final Map<String, String> _textAnswers = {};
+  final Map<String, String> _recordingPaths = {};
 
   @override
   void initState() {
@@ -311,20 +317,37 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
+                    border: Border.all(
+                      color: _selectedChoices[question.id] == question.options[optionIndex]
+                          ? Colors.blue
+                          : Colors.grey[300]!,
+                      width: _selectedChoices[question.id] == question.options[optionIndex] ? 2 : 1,
+                    ),
                     borderRadius: BorderRadius.circular(8),
+                    color: _selectedChoices[question.id] == question.options[optionIndex]
+                        ? Colors.blue.withOpacity(0.1)
+                        : null,
                   ),
                   child: RadioListTile<String>(
                     value: question.options[optionIndex],
-                    groupValue: null,
+                    groupValue: _selectedChoices[question.id],
                     onChanged: (value) {
-                      // 处理选项选择
+                      setState(() {
+                        _selectedChoices[question.id] = value!;
+                        _answers[question.id] = value;
+                      });
                     },
                     title: Text(
                       question.options[optionIndex],
-                      style: const TextStyle(fontSize: 14),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: _selectedChoices[question.id] == question.options[optionIndex]
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    activeColor: Colors.blue,
                   ),
                 ),
               ),
@@ -335,6 +358,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
         
       case 'fill':
         return TextField(
+          controller: TextEditingController(text: _textAnswers[question.id] ?? ''),
           decoration: InputDecoration(
             hintText: '请输入答案',
             border: OutlineInputBorder(
@@ -342,18 +366,26 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
             ),
             contentPadding: const EdgeInsets.all(12),
           ),
+          onChanged: (value) {
+            _textAnswers[question.id] = value;
+            _answers[question.id] = value;
+          },
         );
         
       case 'reading':
         return RecordSoundWidget(
           onRecordingComplete: (String path) {
-            // 录音完成后的回调
-            ApiService.showSuccess(context, '录音完成！文件路径: $path');
+            setState(() {
+              _recordingPaths[question.id] = path;
+              _answers[question.id] = path;
+            });
+            ApiService.showSuccess(context, '录音完成！');
           },
         );
         
       case 'qa':
         return TextField(
+          controller: TextEditingController(text: _textAnswers[question.id] ?? ''),
           maxLines: 4,
           decoration: InputDecoration(
             hintText: '请输入答案',
@@ -362,23 +394,26 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
             ),
             contentPadding: const EdgeInsets.all(12),
           ),
+          onChanged: (value) {
+            _textAnswers[question.id] = value;
+            _answers[question.id] = value;
+          },
         );
         
       case 'summary':
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.blue[200]!),
-          ),
-          child: const Text(
-            '总结题：请根据以上内容进行总结',
-            style: TextStyle(
-              color: Colors.blue,
-              fontWeight: FontWeight.w500,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RecordSoundWidget(
+              onRecordingComplete: (String path) {
+                setState(() {
+                  _recordingPaths[question.id] = path;
+                  _answers[question.id] = path;
+                });
+                ApiService.showSuccess(context, '总结录音完成！');
+              },
             ),
-          ),
+          ],
         );
         
       default:
@@ -555,9 +590,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    ApiService.showSuccess(context, '提交成功！');
-                  },
+                  onPressed: _handleSubmit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
@@ -600,5 +633,95 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
         ),
       ],
     );
+  }
+
+  void _handleSubmit() {
+    // 检查哪些题目没有作答
+    List<int> unansweredQuestions = [];
+    
+    for (int i = 0; i < _questions.length; i++) {
+      String questionId = _questions[i].id;
+      if (_answers[questionId] == null || 
+          (_answers[questionId] is String && _answers[questionId].toString().trim().isEmpty)) {
+        unansweredQuestions.add(i + 1);
+      }
+    }
+
+    if (unansweredQuestions.isEmpty) {
+      // 全部题目都已作答
+      _showConfirmDialog(
+        '确认提交',
+        '是否要提交答案？',
+        () => _submitAnswers(),
+      );
+    } else {
+      // 有题目没有作答
+      String unansweredText = unansweredQuestions.map((questionNum) => '第$questionNum题').join('、');
+      _showConfirmDialog(
+        '确认提交',
+        '${unansweredText}没有作答，确认要提交吗？',
+        () => _submitAnswers(),
+        isWarning: true,
+        unansweredQuestions: unansweredQuestions,
+      );
+    }
+  }
+
+  void _showConfirmDialog(
+    String title,
+    String content,
+    VoidCallback onConfirm, {
+    bool isWarning = false,
+    List<int>? unansweredQuestions,
+  }) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(content),
+              if (unansweredQuestions != null) ...[
+                const SizedBox(height: 8),
+                ...unansweredQuestions.map((questionNum) => Text(
+                  '第$questionNum题没有作答',
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                onConfirm();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isWarning ? Colors.orange : Colors.blue,
+              ),
+              child: Text(isWarning ? '确认提交' : '提交'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _submitAnswers() {
+    // 这里可以添加实际的提交逻辑
+    ApiService.showSuccess(context, '提交成功！');
+    
+    // 打印答案用于调试
+    // print('提交的答案: $_answers');
   }
 } 
