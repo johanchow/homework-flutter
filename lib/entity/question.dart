@@ -21,6 +21,7 @@ class Question {
   final List<String> videos;
   final List<String> audios;
   final List<String> attachments;
+  final List<String> links;
 
   Question({
     required this.id,
@@ -33,6 +34,7 @@ class Question {
     required this.images,
     required this.videos,
     required this.audios,
+    required this.links,
   });
 
   // 从 Map<String, dynamic> 创建 Question 实例
@@ -48,6 +50,7 @@ class Question {
       images: _parseStringList(json['images']),
       videos: _parseStringList(json['videos']),
       audios: _parseStringList(json['audios']),
+      links: _parseStringList(json['links']),
     );
   }
 

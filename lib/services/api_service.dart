@@ -364,6 +364,7 @@ class ApiService {
               'type': 'fill',
               'title': '计算∫(2x+1)dx',
               'images': ['https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png'],
+              'links': ['https://www.iqiyi.com/v_cqgw7gjol0.html'],
             },
             {
               'id': 3,
@@ -381,7 +382,7 @@ class ApiService {
               'id': 5,
               'type': 'summary',
               'title': '总结',
-              'videos': ['https://clothing-try-on-1306401232.cos.ap-guangzhou.myqcloud.com/homework-mentor/1752648300-1b_13.pdf'],
+              'videos': ['https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4'],
             },
             
           ],

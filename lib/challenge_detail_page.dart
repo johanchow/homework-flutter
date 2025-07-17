@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'services/api_service.dart';
 import 'entity/question.dart';
 import 'component/record_sound.dart';
+import 'component/link_preview.dart';
+import 'component/video_player_widget.dart';
 
 class ChallengeDetailPage extends StatefulWidget {
   final int challengeId;
@@ -113,6 +115,18 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
             ),
             
             const SizedBox(height: 16),
+            // 渲染链接
+            if (question.links.isNotEmpty) ...[
+              ...List.generate(
+                question.links.length,
+                (linkIndex) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: LinkPreviewWidget(url: question.links[linkIndex]),
+                ),
+              ),
+            ],
+
+
             // 渲染图片
             if (question.images.isNotEmpty) ...[
               ...List.generate(
@@ -212,53 +226,30 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                 question.videos.length,
                 (videoIndex) => Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red[200]!),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.video_file,
-                          color: Colors.red,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '视频 ${videoIndex + 1}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: Colors.red,
-                                ),
-                              ),
-                              Text(
-                                question.videos[videoIndex],
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.video_file,
+                            color: Colors.red,
+                            size: 20,
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.play_circle, color: Colors.red),
-                          onPressed: () {
-                            ApiService.showSuccess(context, '开始播放视频');
-                          },
-                        ),
-                      ],
-                    ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '视频 ${videoIndex + 1}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      VideoPlayerWidget(videoUrl: question.videos[videoIndex]),
+                    ],
                   ),
                 ),
               ),
