@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'services/api_service.dart';
+import 'api/exam_api.dart';
+import 'api/api.dart';
 import 'challenge_detail_page.dart';
+import 'entity/exam.dart';
 
 class ChallengePage extends StatefulWidget {
   const ChallengePage({super.key});
@@ -10,7 +12,7 @@ class ChallengePage extends StatefulWidget {
 }
 
 class _ChallengePageState extends State<ChallengePage> {
-  List<Map<String, dynamic>> _challenges = [];
+  List<Exam> _challenges = [];
   bool _isLoading = true;
 
   @override
@@ -24,8 +26,10 @@ class _ChallengePageState extends State<ChallengePage> {
       _isLoading = true;
     });
 
+    print('ChallengePage loadData');
     try {
-      final challenges = await ApiService.getTodayChallenges();
+      // final challenges = await ApiService.getTodayChallenges();
+      final challenges = await ExamApi.listTodayExams();
       setState(() {
         _challenges = challenges;
         _isLoading = false;
@@ -35,34 +39,22 @@ class _ChallengePageState extends State<ChallengePage> {
         _isLoading = false;
       });
       if (mounted) {
-        ApiService.showError(context, e.toString());
+        showApiError(context, e.toString());
       }
     }
   }
 
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'pending':
-        return '开始挑战';
-      case 'in_progress':
-        return '继续挑战';
-      case 'completed':
-        return '查看';
-      default:
-        return '开始挑战';
-    }
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return Colors.blue;
-      case 'in_progress':
-        return Colors.orange;
-      case 'completed':
-        return Colors.green;
-      default:
-        return Colors.blue;
+  String _getSubjectFromTitle(String title) {
+    if (title.contains('数学') || title.contains('计算') || title.contains('微积分')) {
+      return '数学';
+    } else if (title.contains('英语') || title.contains('阅读') || title.contains('English')) {
+      return '英语';
+    } else if (title.contains('物理') || title.contains('力学') || title.contains('运动')) {
+      return '物理';
+    } else if (title.contains('化学') || title.contains('有机') || title.contains('实验')) {
+      return '化学';
+    } else {
+      return '综合';
     }
   }
 
@@ -76,8 +68,19 @@ class _ChallengePageState extends State<ChallengePage> {
         return Colors.orange;
       case '化学':
         return Colors.purple;
+      case '综合':
+        return Colors.indigo;
       default:
         return Colors.grey;
+    }
+  }
+
+  String _formatTime(String timeString) {
+    try {
+      final dateTime = DateTime.parse(timeString);
+      return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return timeString;
     }
   }
 
@@ -139,12 +142,12 @@ class _ChallengePageState extends State<ChallengePage> {
                                       width: 50,
                                       height: 50,
                                       decoration: BoxDecoration(
-                                        color: _getSubjectColor(challenge['subject']),
+                                        color: _getSubjectColor(_getSubjectFromTitle(challenge.title)),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Center(
                                         child: Text(
-                                          challenge['subject'] ?? '',
+                                          _getSubjectFromTitle(challenge.title),
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
@@ -158,7 +161,7 @@ class _ChallengePageState extends State<ChallengePage> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            challenge['title'] ?? '',
+                                            challenge.title,
                                             style: const TextStyle(
                                               fontSize: 18,
                                               fontWeight: FontWeight.bold,
@@ -166,13 +169,13 @@ class _ChallengePageState extends State<ChallengePage> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            '开始时间: ${challenge['start_time']}',
+                                            '开始时间: ${_formatTime(challenge.plan_starttime)}',
                                             style: const TextStyle(
                                               color: Colors.grey,
                                             ),
                                           ),
                                           Text(
-                                            '预计时长: ${challenge['duration']}分钟',
+                                            '预计时长: ${challenge.plan_duration}分钟',
                                             style: const TextStyle(
                                               color: Colors.grey,
                                             ),
@@ -186,19 +189,19 @@ class _ChallengePageState extends State<ChallengePage> {
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) => ChallengeDetailPage(
-                                              challengeId: challenge['id'],
+                                              challengeId: challenge.id,
                                             ),
                                           ),
                                         );
                                       },
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: _getStatusColor(challenge['status']),
+                                        backgroundColor: getExamStatusColor(challenge.status),
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                       ),
-                                      child: Text(_getStatusText(challenge['status'])),
+                                      child: Text(challenge.status.label),
                                     ),
                                   ],
                                 ),
