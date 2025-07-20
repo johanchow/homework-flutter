@@ -98,131 +98,6 @@ class ApiService {
   
   // ========== API 方法 ==========
   
-  // 发送验证码
-  static Future<bool> sendVerificationCode(String phone) async {
-    try {
-      // 模拟API调用
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // 实际API调用
-      // final response = await _post('/auth/send-code', body: {'phone': phone});
-      // return response['success'] ?? false;
-      
-      // Mock返回
-      return true;
-    } catch (e) {
-      throw Exception('发送验证码失败: $e');
-    }
-  }
-  
-  // 账号密码登录
-  static Future<Map<String, dynamic>> loginWithPassword(String username, String password) async {
-    try {
-      // 模拟API调用
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // 实际API调用
-      // final response = await _post('/auth/login', body: {
-      //   'username': username,
-      //   'password': password,
-      //   'login_type': 'password',
-      // });
-      
-      // Mock返回
-      return {
-        'token': 'mock_token_${DateTime.now().millisecondsSinceEpoch}',
-        'user': {
-          'id': 1,
-          'username': username,
-          'phone': '13800138000',
-        }
-      };
-    } catch (e) {
-      throw Exception('登录失败: $e');
-    }
-  }
-  
-  // 手机验证码登录
-  static Future<Map<String, dynamic>> loginWithSms(String phone, String code) async {
-    try {
-      // 模拟API调用
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // 实际API调用
-      // final response = await _post('/auth/login', body: {
-      //   'phone': phone,
-      //   'code': code,
-      //   'login_type': 'sms',
-      // });
-      
-      // Mock返回
-      return {
-        'token': 'mock_token_${DateTime.now().millisecondsSinceEpoch}',
-        'user': {
-          'id': 1,
-          'username': '用户${phone.substring(7)}',
-          'phone': phone,
-        }
-      };
-    } catch (e) {
-      throw Exception('登录失败: $e');
-    }
-  }
-  
-  // 账号密码注册
-  static Future<Map<String, dynamic>> registerWithPassword(String username, String password) async {
-    try {
-      // 模拟API调用
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // 实际API调用
-      // final response = await _post('/auth/register', body: {
-      //   'username': username,
-      //   'password': password,
-      //   'register_type': 'password',
-      // });
-      
-      // Mock返回
-      return {
-        'token': 'mock_token_${DateTime.now().millisecondsSinceEpoch}',
-        'user': {
-          'id': 1,
-          'username': username,
-          'phone': '13800138000',
-        }
-      };
-    } catch (e) {
-      throw Exception('注册失败: $e');
-    }
-  }
-  
-  // 手机验证码注册
-  static Future<Map<String, dynamic>> registerWithSms(String phone, String code) async {
-    try {
-      // 模拟API调用
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // 实际API调用
-      // final response = await _post('/auth/register', body: {
-      //   'phone': phone,
-      //   'code': code,
-      //   'register_type': 'sms',
-      // });
-      
-      // Mock返回
-      return {
-        'token': 'mock_token_${DateTime.now().millisecondsSinceEpoch}',
-        'user': {
-          'id': 1,
-          'username': '用户${phone.substring(7)}',
-          'phone': phone,
-        }
-      };
-    } catch (e) {
-      throw Exception('注册失败: $e');
-    }
-  }
-  
   // 获取今日挑战列表
   static Future<List<Map<String, dynamic>>> getTodayChallenges() async {
     try {
@@ -230,10 +105,17 @@ class ApiService {
       await Future.delayed(const Duration(seconds: 1));
       
       // 实际API调用
-      // final response = await _get('/challenges/today');
-      // return List<Map<String, dynamic>>.from(response['data'] ?? []);
+      final response = await _get('/exam/list',queryParameters: {
+        'page': 1, 'page_size': 10,
+        // 今天0点
+        'plan_starttime_from': DateTime.now().toIso8601String().split('T')[0],
+        // 明天0点
+        'plan_starttime_to': DateTime.now().add(const Duration(days: 1)).toIso8601String().split('T')[0]
+      });
+      return List<Map<String, dynamic>>.from(response['data'] ?? []);
       
       // Mock返回
+      /*
       return [
         {
           'id': 1,
@@ -260,6 +142,7 @@ class ApiService {
           'status': 'completed',
         },
       ];
+      */
     } catch (e) {
       throw Exception('获取今日挑战失败: $e');
     }
@@ -289,51 +172,51 @@ class ApiService {
   // 获取最近挑战列表
   static Future<List<Map<String, dynamic>>> getRecentChallenges() async {
     try {
-      // 模拟API调用
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // 实际API调用
-      // final response = await _get('/challenges/recent');
-      // return List<Map<String, dynamic>>.from(response['data'] ?? []);
+      final response = await _get('/exam/list', queryParameters: {
+        'page': 1, 'page_size': 10,
+        // 今日0点
+        'plan_starttime_to': DateTime.now().toIso8601String().split('T')[0],
+      });
+      return List<Map<String, dynamic>>.from(response['data'] ?? []);
       
       // Mock返回
-      return [
-        {
-          'id': 1,
-          'subject': '数学',
-          'title': '高等数学练习',
-          'duration': 120,
-          'completed_time': '2024-01-15 09:30',
-        },
-        {
-          'id': 2,
-          'subject': '英语',
-          'title': '阅读理解训练',
-          'duration': 90,
-          'completed_time': '2024-01-14 14:20',
-        },
-        {
-          'id': 3,
-          'subject': '物理',
-          'title': '力学计算题',
-          'duration': 60,
-          'completed_time': '2024-01-13 16:15',
-        },
-        {
-          'id': 4,
-          'subject': '化学',
-          'title': '有机化学实验',
-          'duration': 150,
-          'completed_time': '2024-01-12 10:45',
-        },
-      ];
+      // return [
+      //   {
+      //     'id': 1,
+      //     'subject': '数学',
+      //     'title': '高等数学练习',
+      //     'duration': 120,
+      //     'completed_time': '2024-01-15 09:30',
+      //   },
+      //   {
+      //     'id': 2,
+      //     'subject': '英语',
+      //     'title': '阅读理解训练',
+      //     'duration': 90,
+      //     'completed_time': '2024-01-14 14:20',
+      //   },
+      //   {
+      //     'id': 3,
+      //     'subject': '物理',
+      //     'title': '力学计算题',
+      //     'duration': 60,
+      //     'completed_time': '2024-01-13 16:15',
+      //   },
+      //   {
+      //     'id': 4,
+      //     'subject': '化学',
+      //     'title': '有机化学实验',
+      //     'duration': 150,
+      //     'completed_time': '2024-01-12 10:45',
+      //   },
+      // ];
     } catch (e) {
       throw Exception('获取最近挑战失败: $e');
     }
   }
   
   // 获取挑战详情
-  static Future<Map<String, dynamic>> getChallengeDetail(int challengeId) async {
+  static Future<Map<String, dynamic>> getChallengeDetail(String challengeId) async {
     try {
       // 模拟API调用
       await Future.delayed(const Duration(seconds: 1));

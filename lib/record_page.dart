@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'services/api_service.dart';
+import 'api/exam_api.dart';
+import 'api/api.dart';
 import 'challenge_detail_page.dart';
+import 'entity/exam.dart';
 
 class RecordPage extends StatefulWidget {
   const RecordPage({super.key});
@@ -21,6 +23,8 @@ class _RecordPageState extends State<RecordPage> {
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = true;
     });
@@ -28,21 +32,25 @@ class _RecordPageState extends State<RecordPage> {
     try {
       // 并行加载数据
       final results = await Future.wait([
-        ApiService.getChallengeSummary(),
-        ApiService.getRecentChallenges(),
+        ExamApi.getExamSummary(),
+        ExamApi.listHistoryExams(),
       ]);
 
+      if (!mounted) return;
+      
       setState(() {
         _summaryStat = results[0] as Map<String, dynamic>;
-        _exams = results[1] as List<Map<String, dynamic>>;
+        _exams = (results[1] as List<Exam>).map((exam) => exam.toJson()).toList();
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+      
       setState(() {
         _isLoading = false;
       });
       if (mounted) {
-        ApiService.showError(context, e.toString());
+        showApiError(context, e.toString());
       }
     }
   }

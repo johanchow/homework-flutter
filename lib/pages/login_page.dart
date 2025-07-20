@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import '../api/user_api.dart';
+import '../api/api.dart';
 import '../utils/storage_manager.dart';
 import 'register_page.dart';
 
@@ -45,12 +46,12 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _sendVerificationCode() async {
     if (_phoneController.text.isEmpty) {
-      ApiService.showError(context, '请输入手机号');
+      showApiError(context, '请输入手机号');
       return;
     }
 
     if (!RegExp(r'^1[3-9]\d{9}$').hasMatch(_phoneController.text)) {
-      ApiService.showError(context, '请输入正确的手机号');
+      showApiError(context, '请输入正确的手机号');
       return;
     }
 
@@ -59,10 +60,10 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final success = await ApiService.sendVerificationCode(_phoneController.text);
+      final success = await UserApi.sendVerificationCode(_phoneController.text);
       
       if (success) {
-        ApiService.showSuccess(context, '验证码已发送');
+        showApiSuccess(context, '验证码已发送');
         
         // 开始倒计时
         setState(() {
@@ -72,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
         _startCountdown();
       }
     } catch (e) {
-      ApiService.showError(context, e.toString());
+      showApiError(context, e.toString());
     } finally {
       setState(() {
         _isLoading = false;
@@ -106,12 +107,12 @@ class _LoginPageState extends State<LoginPage> {
       Map<String, dynamic> response;
       
       if (_isPasswordLogin) {
-        response = await ApiService.loginWithPassword(
+        response = await UserApi.loginWithPassword(
           _usernameController.text,
           _passwordController.text,
         );
       } else {
-        response = await ApiService.loginWithSms(
+        response = await UserApi.loginWithSms(
           _phoneController.text,
           _codeController.text,
         );
@@ -121,14 +122,14 @@ class _LoginPageState extends State<LoginPage> {
       await StorageManager.saveToken(response['token']);
       await StorageManager.saveUserInfo(response['user']);
       
-      ApiService.showSuccess(context, '登录成功');
+      showApiSuccess(context, '登录成功');
       
       // 登录成功后跳转到主页面
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/main');
       }
     } catch (e) {
-      ApiService.showError(context, e.toString());
+      showApiError(context, e.toString());
     } finally {
       setState(() {
         _isLoading = false;

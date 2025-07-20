@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'record_page.dart';
 import 'challenge_page.dart';
 import 'ai_page.dart';
 import 'pages/login_page.dart';
 import 'utils/storage_manager.dart';
 
-void main() {
+void main() async {
+  // 加载环境变量
+  print('load env');
+  // await dotenv.load(fileName: ".development.env");
+  print('load env done');
   runApp(const MyApp());
 }
 

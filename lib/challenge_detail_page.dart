@@ -7,7 +7,7 @@ import 'component/video_player_widget.dart';
 import 'component/chat_box.dart';
 
 class ChallengeDetailPage extends StatefulWidget {
-  final int challengeId;
+  final String challengeId;
 
   const ChallengeDetailPage({super.key, required this.challengeId});
 

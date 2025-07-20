@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import '../api/user_api.dart';
+import '../api/api.dart';
 import '../utils/storage_manager.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -53,12 +54,12 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Future<void> _sendVerificationCode() async {
     if (_phoneController.text.isEmpty) {
-      ApiService.showError(context, '请输入手机号');
+      showApiError(context, '请输入手机号');
       return;
     }
 
     if (!RegExp(r'^1[3-9]\d{9}$').hasMatch(_phoneController.text)) {
-      ApiService.showError(context, '请输入正确的手机号');
+      showApiError(context, '请输入正确的手机号');
       return;
     }
 
@@ -67,10 +68,10 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
-      final success = await ApiService.sendVerificationCode(_phoneController.text);
+      final success = await UserApi.sendVerificationCode(_phoneController.text);
       
       if (success) {
-        ApiService.showSuccess(context, '验证码已发送');
+        showApiSuccess(context, '验证码已发送');
         
         // 开始倒计时
         setState(() {
@@ -80,7 +81,7 @@ class _RegisterPageState extends State<RegisterPage> {
         _startCountdown();
       }
     } catch (e) {
-      ApiService.showError(context, e.toString());
+      showApiError(context, e.toString());
     } finally {
       setState(() {
         _isLoading = false;
@@ -114,12 +115,12 @@ class _RegisterPageState extends State<RegisterPage> {
       Map<String, dynamic> response;
       
       if (_isPasswordRegister) {
-        response = await ApiService.registerWithPassword(
+        response = await UserApi.registerWithPassword(
           _usernameController.text,
           _passwordController.text,
         );
       } else {
-        response = await ApiService.registerWithSms(
+        response = await UserApi.registerWithSms(
           _phoneController.text,
           _codeController.text,
         );
@@ -129,14 +130,14 @@ class _RegisterPageState extends State<RegisterPage> {
       await StorageManager.saveToken(response['token']);
       await StorageManager.saveUserInfo(response['user']);
       
-      ApiService.showSuccess(context, '注册成功');
+      showApiSuccess(context, '注册成功');
       
       // 注册成功后返回登录页面
       if (mounted) {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      ApiService.showError(context, e.toString());
+      showApiError(context, e.toString());
     } finally {
       setState(() {
         _isLoading = false;
