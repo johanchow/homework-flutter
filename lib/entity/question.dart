@@ -80,7 +80,7 @@ class Question {
       'title': title,
       'answer': answer,
       'subject': subject,
-      'type': type,
+      'type': type.name,
       'attachments': attachments,
       'options': options,
       'images': images,

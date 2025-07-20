@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'services/api_service.dart';
+import 'api/exam_api.dart';
 import 'entity/question.dart';
+import 'entity/exam.dart';
 import 'component/record_sound.dart';
 import 'component/link_preview.dart';
 import 'component/video_player_widget.dart';
@@ -16,7 +18,7 @@ class ChallengeDetailPage extends StatefulWidget {
 }
 
 class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
-  Map<String, dynamic> _challengeDetail = {};
+  Exam _challengeDetail = Exam(id: '', title: '', plan_starttime: '', plan_duration: 0, status: ExamStatus.pending, question_ids: [], questions: [], created_at: '', updated_at: '');
   List<Question> _questions = [];
   bool _isLoading = true;
   String? _error;
@@ -40,19 +42,12 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
     });
 
     try {
-      final detail = await ApiService.getChallengeDetail(widget.challengeId);
+      final exam = await ExamApi.getExamDetail(widget.challengeId);
       
-      // 将API数据转换为Question对象
-      List<Question> questions = [];
-      if (detail['questions'] != null) {
-        questions = (detail['questions'] as List)
-            .map((q) => Question.fromJson(q))
-            .toList();
-      }
-      
+      print('exam questions: ${exam.questions}');
       setState(() {
-        _challengeDetail = detail;
-        _questions = questions;
+        _challengeDetail = exam;
+        _questions = exam.questions;
         _isLoading = false;
       });
     } catch (e) {
@@ -427,7 +422,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_challengeDetail['title'] ?? '挑战详情'),
+        title: Text(_challengeDetail.title ?? '挑战详情'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         leading: IconButton(
@@ -488,18 +483,10 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _challengeDetail['title'] ?? '',
+                                _challengeDetail.title ?? '',
                                 style: const TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _challengeDetail['description'] ?? '',
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 14,
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -508,14 +495,14 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                                   Expanded(
                                     child: _buildInfoItem(
                                       '开始时间',
-                                      _challengeDetail['start_time'] ?? '',
+                                      _challengeDetail.plan_starttime ?? '',
                                       Icons.access_time,
                                     ),
                                   ),
                                   Expanded(
                                     child: _buildInfoItem(
                                       '预计时长',
-                                      '${_challengeDetail['duration']}分钟',
+                                      '${_challengeDetail.plan_duration}分钟',
                                       Icons.timer,
                                     ),
                                   ),
@@ -717,11 +704,37 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
     );
   }
 
-  void _submitAnswers() {
-    // 这里可以添加实际的提交逻辑
-    ApiService.showSuccess(context, '提交成功！');
+  void _submitAnswers() async {
+    print('submit answers: $_answers');
+    final answerJson = {
+      'questions': _questions,
+      'messages': {},
+      'answers': _answers,
+    };
     
-    // 打印答案用于调试
-    // print('提交的答案: $_answers');
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    late final bool isSuccess;
+    late final String errorMessage;
+    try {
+      isSuccess = await ExamApi.submitAnswers(widget.challengeId, answerJson);
+    } catch (e) {
+      isSuccess = false;
+      errorMessage = e.toString();
+    }
+    if (isSuccess) {
+      ApiService.showSuccess(context, '提交成功');
+      setState(() {
+        _isLoading = false;
+        _error = null;
+      });
+    } else {
+      setState(() {
+        _isLoading = false;
+        _error = errorMessage;
+      });
+    }
   }
 } 

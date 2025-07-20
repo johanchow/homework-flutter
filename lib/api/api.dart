@@ -48,6 +48,7 @@ Future<Map<String, dynamic>> httpPost(
   try {
     final headers = await getHttpHeaders();
     final uri = Uri.parse('$baseUrl$endpoint');
+    print('http post uri: $uri');
     
     final response = await http.post(
       uri,
