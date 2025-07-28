@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../utils/storage_manager.dart';
 
+// 全局导航键，用于在非widget上下文中进行导航
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 String get baseUrl {
   // final url = dotenv.env['API_BASE_URL'];
-  final url = 'http://192.168.10.103:5556';
-  if (url == null || url.isEmpty) {
+  final url = 'http://192.168.10.101:5556/api';
+  if (url.isEmpty) {
     throw Exception('API_BASE_URL环境变量未设置');
   }
   return url;
@@ -27,15 +30,20 @@ Future<Map<String, dynamic>> httpGet(
   String endpoint, {
   Map<String, dynamic>? queryParameters,
 }) async {
-  final headers = await getHttpHeaders();
-  final uri = Uri.parse('$baseUrl$endpoint').replace(
-    queryParameters: queryParameters?.map((key, value) => MapEntry(key, value.toString())),
-  );
-  print('uri: $uri');
   try {
+    final headers = await getHttpHeaders();
+    final uri = Uri.parse('$baseUrl$endpoint').replace(
+      queryParameters: queryParameters?.map((key, value) => MapEntry(key, value.toString())),
+    );
+    print('uri: $uri');
+    
     final response = await http.get(uri, headers: headers);
-    return handleHttpResponse(response);
+    return await handleHttpResponse(response);
   } catch (e) {
+    if (e.toString().contains('HTTP_401_UNAUTHORIZED')) {
+      // 401错误已经在handleHttpResponse中处理了，这里不需要重复处理
+      throw e;
+    }
     throw Exception('网络请求失败: $e');
   }
 }
@@ -56,14 +64,28 @@ Future<Map<String, dynamic>> httpPost(
       body: body != null ? jsonEncode(body) : null,
     );
     
-    return handleHttpResponse(response);
+    return await handleHttpResponse(response);
   } catch (e) {
+    if (e.toString().contains('HTTP_401_UNAUTHORIZED')) {
+      // 401错误已经在handleHttpResponse中处理了，这里不需要重复处理
+      throw e;
+    }
     throw Exception('网络请求失败: $e');
   }
 }
 
 // 处理响应数据
-Map<String, dynamic> handleHttpResponse(http.Response response) {
+Future<Map<String, dynamic>> handleHttpResponse(http.Response response) async {
+  // 处理401未授权错误
+  if (response.statusCode == 401) {
+    // 清除本地登录信息
+    await StorageManager.clearLoginInfo();
+    // 自动跳转到登录页面
+    handleUnauthorized();
+    // 抛出401异常，让调用方处理
+    throw Exception('HTTP_401_UNAUTHORIZED');
+  }
+  
   if (response.statusCode >= 200 && response.statusCode < 300) {
     if (response.body.isEmpty) {
       throw Exception('响应数据为空');
@@ -101,5 +123,17 @@ void showApiSuccess(BuildContext context, String message) {
       backgroundColor: Colors.green,
       behavior: SnackBarBehavior.floating,
     ),
+  );
+}
+
+// 处理401未授权错误，跳转到登录页面
+void handleUnauthorized() {
+  // 清除登录信息
+  StorageManager.clearLoginInfo();
+  
+  // 使用全局导航键跳转到登录页面
+  navigatorKey.currentState?.pushNamedAndRemoveUntil(
+    '/login',
+    (route) => false, // 清除所有路由历史
   );
 }

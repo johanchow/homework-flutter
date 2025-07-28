@@ -5,6 +5,7 @@ import 'challenge_page.dart';
 import 'ai_page.dart';
 import 'pages/login_page.dart';
 import 'utils/storage_manager.dart';
+import 'api/api.dart';
 
 void main() async {
   // 加载环境变量
@@ -25,6 +26,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
+      navigatorKey: navigatorKey, // 使用全局导航键
       home: const AuthWrapper(),
       routes: {
         '/login': (context) => const LoginPage(),
