@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import '../entity/question.dart';
+import '../entity/session.dart';
+import '../api/question_api.dart';
+import '../api/session_api.dart';
+import '../utils/storage_manager.dart';
 
 class ChatBox extends StatefulWidget {
+  final String? examId;
   final String? questionId;
   final String? initialMessage;
   final Function(Question?)? onQuestionLoaded;
 
   const ChatBox({
     super.key,
+    this.examId,
     this.questionId,
     this.initialMessage,
     this.onQuestionLoaded,
@@ -23,6 +29,7 @@ class _ChatBoxState extends State<ChatBox> {
   final ScrollController _scrollController = ScrollController();
   Question? _currentQuestion;
   bool _isLoadingQuestion = false;
+  String? _currentSessionId;
 
   @override
   void initState() {
@@ -30,7 +37,7 @@ class _ChatBoxState extends State<ChatBox> {
     _initializeChat();
   }
 
-  void _initializeChat() {
+  void _initializeChat() async {
     // 添加欢迎消息
     String welcomeMessage = widget.initialMessage ?? '你好！我是你的学习助手，有什么问题可以随时问我。';
     _messages.add(ChatMessage(
@@ -38,10 +45,36 @@ class _ChatBoxState extends State<ChatBox> {
       isUser: false,
     ));
 
-    // 如果有questionId，加载题目详情
-    if (widget.questionId != null) {
-      _loadQuestionDetail();
+    // 如果有examId和questionId，从本地获取session_id
+    print('aaaaaaaaaaaaa');
+    if (widget.examId != null && widget.questionId != null) {
+      _currentSessionId = await StorageManager.getSessionId(widget.examId!, widget.questionId!);
+      print('bbbbbbbbbbbbbb');
+      if (_currentSessionId != null && _currentSessionId!.isNotEmpty) {
+        try {
+          final sessionInfo = await SessionApi.getSession(_currentSessionId!);
+          print('sessionInfo.messages: ${sessionInfo.messages}');
+          if (sessionInfo.messages.isNotEmpty) {
+            setState(() {
+              _messages.clear(); // 清除欢迎消息
+              _messages.addAll(sessionInfo.messages.map((message) => ChatMessage(
+                text: message.content,
+                isUser: message.role == MessageRole.user,
+              )));
+            });
+            _scrollToBottom();
+          }
+        } catch (e) {
+          print('加载session失败: $e');
+          // 如果加载session失败，继续使用欢迎消息
+        }
+      }
     }
+
+    // // 如果有questionId，加载题目详情
+    // if (widget.questionId != null) {
+    //   _loadQuestionDetail();
+    // }
   }
 
   Future<void> _loadQuestionDetail() async {
@@ -51,25 +84,7 @@ class _ChatBoxState extends State<ChatBox> {
 
     try {
       // 模拟API调用获取题目详情
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      // 这里应该调用真实的API，现在用模拟数据
-      final questionData = {
-        'id': widget.questionId,
-        'title': '这是一道关于${widget.questionId}的题目',
-        'content': '请详细分析这道题目的解题思路和步骤',
-        'type': 'qa',
-        'subject': '数学',
-        'answer': '',
-        'options': [],
-        'images': [],
-        'videos': [],
-        'audios': [],
-        'attachments': [],
-        'links': [],
-      };
-
-      final question = Question.fromJson(questionData);
+      final question = await QuestionApi.getQuestion(widget.questionId!);
       
       setState(() {
         _currentQuestion = question;
@@ -88,7 +103,7 @@ class _ChatBoxState extends State<ChatBox> {
       setState(() {
         _isLoadingQuestion = false;
       });
-      _addAIMessage('抱歉，加载题目详情时出现错误：$e');
+      throw Exception('加载题目详情失败');
     }
   }
 
@@ -109,7 +124,7 @@ class _ChatBoxState extends State<ChatBox> {
     super.dispose();
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
     if (_textController.text.trim().isEmpty) return;
 
     setState(() {
@@ -119,28 +134,33 @@ class _ChatBoxState extends State<ChatBox> {
       ));
     });
 
+    try {
+      // 调用API获取AI回复
+      final response = await QuestionApi.getQuestionGuide({
+        'question_id': widget.questionId!,
+        'new_message': _textController.text,
+        'session_id': _currentSessionId ?? '',
+      });
+
+      String aiMessage = response['ai_message'] ?? '';
+      String sessionId = response['session_id'] ?? '';
+
+      // 更新session_id到本地存储
+      if (sessionId.isNotEmpty && widget.examId != null && widget.questionId != null) {
+        await StorageManager.saveSessionId(widget.examId!, widget.questionId!, sessionId);
+        _currentSessionId = sessionId;
+      }
+
+      _addAIMessage(aiMessage);
+    } catch (e) {
+      throw Exception('发送消息失败: $e');
+    }
+
     _textController.clear();
     _scrollToBottom();
-
-    // 模拟AI回复
-    Future.delayed(const Duration(seconds: 1), () {
-      String response = _generateAIResponse(_textController.text);
-      _addAIMessage(response);
-    });
   }
 
-  String _generateAIResponse(String userMessage) {
-    // 简单的AI回复逻辑
-    if (userMessage.contains('题目') || userMessage.contains('解题')) {
-      return '我来帮您分析这道题目。首先，我们需要理解题目的要求，然后...';
-    } else if (userMessage.contains('答案') || userMessage.contains('结果')) {
-      return '让我为您提供详细的解题步骤和答案...';
-    } else if (userMessage.contains('思路') || userMessage.contains('方法')) {
-      return '这道题目的解题思路是...';
-    } else {
-      return '我理解您的问题，让我为您提供帮助...';
-    }
-  }
+
 
   void _clearMessages() {
     setState(() {

@@ -26,7 +26,7 @@ class _RecordPageState extends State<RecordPage> {
     if (!mounted) return;
     
     setState(() {
-      _isLoading = true;
+      // _isLoading = true;
     });
 
     try {
