@@ -13,7 +13,7 @@ enum QuestionType {
 class Question {
   final String id;
   final String title;
-  final String answer;
+  final String material;
   final String subject;
   final QuestionType type;
   final List<String> options;
@@ -26,7 +26,7 @@ class Question {
   Question({
     required this.id,
     required this.title,
-    required this.answer,
+    required this.material,
     required this.subject,
     required this.type,
     required this.attachments,
@@ -42,7 +42,7 @@ class Question {
     return Question(
       id: (json['id'] ?? '').toString(),
       title: json['title'] ?? json['content'] ?? '',
-      answer: json['answer'] ?? '',
+      material: json['material'] ?? '',
       subject: json['subject'] ?? '',
       type: _parseQuestionType(json['type']),
       attachments: _parseStringList(json['attachments']),
@@ -78,7 +78,7 @@ class Question {
     return {
       'id': id,
       'title': title,
-      'answer': answer,
+      'material': material,
       'subject': subject,
       'type': type.name,
       'attachments': attachments,

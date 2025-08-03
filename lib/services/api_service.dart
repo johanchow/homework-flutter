@@ -259,7 +259,6 @@ class ApiService {
               'id': 4,
               'type': 'reading',
               'title': '读一读',
-              'answer': 'This is a reading question \n I want to go to the park',
             },
             {
               'id': 5,
@@ -285,14 +284,12 @@ class ApiService {
               'type': 'choice',
               'title': 'What is the main idea of the passage?',
               'options': ['Technology advancement', 'Environmental protection', 'Economic development', 'Social progress'],
-              'answer': 'Technology advancement',
             },
             {
               'id': 2,
               'type': 'choice',
               'title': 'According to the text, which statement is correct?',
               'options': ['eat', 'sleep', 'code', 'play'],
-              'answer': 'code',
             },
           ],
         };
@@ -311,14 +308,12 @@ class ApiService {
               'type': 'choice',
               'title': '一个物体从静止开始做匀加速直线运动，加速度为2m/s²，5秒后的速度是多少？',
               'options': ['5m/s', '10m/s', '15m/s', '20m/s'],
-              'answer': '10m/s',
               'images': ['https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png'],
             },
             {
               'id': 2,
               'type': 'fill',
               'title': '计算物体在重力作用下的自由落体运动，从10米高度落下需要多长时间？',
-              'answer': '1.43s',
             },
           ],
         };
@@ -336,7 +331,6 @@ class ApiService {
               'id': 1,
               'type': 'qa',
               'title': '请阅读实验手册，回答以下问题：有机化学实验的安全注意事项有哪些？',
-              'answer': '',
               'attachments': ['https://clothing-try-on-1306401232.cos.ap-guangzhou.myqcloud.com/homework-mentor/1752648300-1b_13.pdf'],
             },
             {
@@ -344,7 +338,6 @@ class ApiService {
               'type': 'choice',
               'title': '在有机化学实验中，以下哪种操作是正确的？',
               'options': ['直接用手接触化学试剂', '在通风橱中进行实验', '将废液倒入下水道', '在实验室内饮食'],
-              'answer': '在通风橱中进行实验',
             },
           ],
         };
@@ -364,7 +357,6 @@ class ApiService {
               'type': 'choice',
               'content': '这是一道选择题',
               'options': ['选项A', '选项B', '选项C', '选项D'],
-              'answer': '选项A',
             },
           ],
         };

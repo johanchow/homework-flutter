@@ -9,7 +9,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 String get baseUrl {
   // final url = dotenv.env['API_BASE_URL'];
-  final url = 'http://192.168.10.105:5556/api';
+  final url = 'http://192.168.1.24:5556/api';
   if (url.isEmpty) {
     throw Exception('API_BASE_URL环境变量未设置');
   }

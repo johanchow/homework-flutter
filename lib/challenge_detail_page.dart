@@ -7,6 +7,7 @@ import 'component/record_sound.dart';
 import 'component/link_preview.dart';
 import 'component/video_player_widget.dart';
 import 'component/chat_box.dart';
+import 'component/tts_button.dart';
 
 class ChallengeDetailPage extends StatefulWidget {
   final String challengeId;
@@ -32,6 +33,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
   @override
   void initState() {
     super.initState();
+    print('ChallengeDetailPage initState');
     _loadChallengeDetail();
   }
 
@@ -160,6 +162,16 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                 (linkIndex) => Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: LinkPreviewWidget(url: question.links[linkIndex]),
+                ),
+              ),
+            ],
+
+            // 如果是阅读题目，则把material用tts_button组件渲染，方便直接发音阅读
+            if (question.type.name == 'reading') ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: TtsButtonWidget(
+                  sentence: (question.material ?? '')
                 ),
               ),
             ],

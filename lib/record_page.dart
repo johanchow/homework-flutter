@@ -19,6 +19,7 @@ class _RecordPageState extends State<RecordPage> {
   @override
   void initState() {
     super.initState();
+    debugPrint('RecordPage initState');
     _loadData();
   }
 
