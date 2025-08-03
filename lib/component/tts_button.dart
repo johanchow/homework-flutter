@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class TtsButtonWidget extends StatefulWidget {
   final String sentence;
@@ -10,21 +11,62 @@ class TtsButtonWidget extends StatefulWidget {
 }
 
 class _TtsButtonWidgetState extends State<TtsButtonWidget> {
+  final FlutterTts flutterTts = FlutterTts();
   bool _isPlaying = false;
 
-  void _playAudio() {
-    setState(() {
-      _isPlaying = true;
-    });
+  @override
+  void initState() {
+    super.initState();
 
-    // 模拟播放音频
-    Future.delayed(const Duration(seconds:2), () {
+    // 设置播放完成监听器
+    flutterTts.setCompletionHandler(() {
       if (mounted) {
         setState(() {
           _isPlaying = false;
         });
       }
     });
+
+    flutterTts.setErrorHandler((msg) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = false;
+        });
+      }
+    });
+
+    flutterTts.setSpeechRate(0.45);
+  }
+
+  bool _containsChinese(String text) {
+    // 中文字符范围 \u4e00-\u9fff
+    return RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
+  }
+
+  Future<void> _playAudio() async {
+    if (_isPlaying || widget.sentence.trim().isEmpty) return;
+
+    setState(() {
+      _isPlaying = true;
+    });
+
+    await flutterTts.stop();
+
+    // 自动判断语言
+    final isChinese = _containsChinese(widget.sentence);
+    await flutterTts.setLanguage(isChinese ? "zh-CN" : "en-US");
+
+    await flutterTts.speak(widget.sentence).then((_) {
+      print("Speech started successfully");
+    }).catchError((e) {
+      print("Error in speaking: $e");
+    });
+  }
+
+  @override
+  void dispose() {
+    flutterTts.stop();
+    super.dispose();
   }
 
   @override
@@ -42,7 +84,7 @@ class _TtsButtonWidgetState extends State<TtsButtonWidget> {
           Icon(
             _isPlaying ? Icons.pause : Icons.play_arrow,
             color: Colors.green,
-            size:24,
+            size: 24,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -68,3 +110,4 @@ class _TtsButtonWidgetState extends State<TtsButtonWidget> {
     );
   }
 }
+

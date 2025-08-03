@@ -18,6 +18,7 @@ class _ChallengePageState extends State<ChallengePage> {
   @override
   void initState() {
     super.initState();
+    print('ChallengePage initState');
     _loadData();
   }
 

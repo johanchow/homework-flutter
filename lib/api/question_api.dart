@@ -9,6 +9,7 @@ class QuestionApi {
       'id': questionId,
     });
     final question = Question.fromJson(response['data'] ?? {});
+    print('httpGet question: $question');
     return question;
   }
 

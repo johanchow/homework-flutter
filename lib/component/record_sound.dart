@@ -222,25 +222,10 @@ class _RecordSoundWidgetState extends State<RecordSoundWidget> {
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.mic,
-            color: Colors.red,
-            size: 32,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            '语音作答',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.red,
-            ),
-          ),
-          const SizedBox(height: 12),
           ElevatedButton.icon(
             onPressed: _startRecording,
             icon: const Icon(Icons.mic),
-            label: const Text('开始录音'),
+            label: const Text('开始录音作答'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
