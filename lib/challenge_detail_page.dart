@@ -123,7 +123,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                         MaterialPageRoute(
                           builder: (context) => ChatBox(
                             examId: widget.challengeId,
-                            questionId: question.id,
+                            question: question,
                             onQuestionLoaded: (loadedQuestion) {
                               // 可以在这里处理题目加载完成后的逻辑
                               // 题目详情已加载: ${loadedQuestion?.title}
