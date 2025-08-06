@@ -8,7 +8,7 @@ class AIPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return const ChatBox(
       examId: null, // AI页面不需要examId
-      questionId: null, // AI页面不需要questionId
+      question: null, // AI页面不需要questionId
     );
   }
 } 
