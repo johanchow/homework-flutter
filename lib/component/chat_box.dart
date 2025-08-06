@@ -300,24 +300,6 @@ class _ChatBoxState extends State<ChatBox> {
           ),
           Column(
             children: [
-              // 功能提示
-              if (!_isRecording)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Text(
-                        '长按🎤录音，点击📷拍照',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -337,24 +319,24 @@ class _ChatBoxState extends State<ChatBox> {
                       onLongPressStart: (_) => _startVoiceRecording(),
                       onLongPressEnd: (_) => _stopVoiceRecording(),
                       child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: _isRecording ? Colors.red : Colors.blue,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
+                        padding: const EdgeInsets.all(4),
                         child: Icon(
                           _isRecording ? Icons.stop : Icons.mic,
-                          color: Colors.white,
-                          size: 20,
+                          color: _isRecording ? Colors.red : Colors.blue,
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     // 拍照按钮
-                    IconButton(
-                      onPressed: _takePhoto,
-                      icon: const Icon(Icons.camera_alt),
-                      color: Colors.blue,
+                    GestureDetector(
+                      onTap: _takePhoto,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.blue,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
