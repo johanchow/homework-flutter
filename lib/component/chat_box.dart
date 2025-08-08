@@ -341,13 +341,19 @@ class _ChatBoxState extends State<ChatBox> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                return _messages[index];
+            child: GestureDetector(
+              onTap: () {
+                // 点击空白区域收起键盘
+                FocusScope.of(context).unfocus();
               },
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  return _messages[index];
+                },
+              ),
             ),
           ),
           Column(
