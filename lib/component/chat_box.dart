@@ -53,24 +53,22 @@ class _ChatBoxState extends State<ChatBox> {
     ));
 
     // 如果有examId和questionId，从本地获取session_id
-    if (widget.examId != null && widget.question?.id != null) {
-      _currentSessionId = await StorageManager.getSessionId(widget.examId!, widget.question!.id);
-      if (_currentSessionId != null && _currentSessionId!.isNotEmpty) {
-        try {
-          final sessionInfo = await SessionApi.getSession(_currentSessionId!);
-          if (sessionInfo.messages.isNotEmpty) {
-            setState(() {
-              _messages.clear(); // 清除欢迎消息
-              _messages.addAll(sessionInfo.messages.map((message) => ChatMessage(
-                text: message.content,
-                isUser: message.role == MessageRole.user,
-              )));
-            });
-            _scrollToBottom();
-          }
-        } catch (e) {
-          // 如果加载session失败，继续使用欢迎消息
+    _currentSessionId = await StorageManager.getSessionId(buildSessionKey(widget.examId, widget.question));
+    if (_currentSessionId != null && _currentSessionId!.isNotEmpty) {
+      try {
+        final sessionInfo = await SessionApi.getSession(_currentSessionId!);
+        if (sessionInfo.messages.isNotEmpty) {
+          setState(() {
+            _messages.clear(); // 清除欢迎消息
+            _messages.addAll(sessionInfo.messages.map((message) => ChatMessage(
+              text: message.content,
+              isUser: message.role == MessageRole.user,
+            )));
+          });
+          _scrollToBottom();
         }
+      } catch (e) {
+        // 如果加载session失败，继续使用欢迎消息
       }
     }
   }
@@ -164,13 +162,46 @@ class _ChatBoxState extends State<ChatBox> {
   // 拍照功能
   Future<void> _takePhoto() async {
     try {
-      // 请求相机权限
-      final status = await Permission.camera.request();
-      if (status != PermissionStatus.granted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('需要相机权限才能拍照')),
-          );
+      // 检查并请求相机权限
+      var status = await Permission.camera.status;
+      if (!status.isGranted) {
+        status = await Permission.camera.request();
+      }
+
+      // 仍未授权，引导去系统设置页面
+      if (!status.isGranted) {
+        // 永久拒绝或受限制，直接跳转设置
+        if (status.isPermanentlyDenied || status.isRestricted) {
+          final opened = await openAppSettings();
+          if (!opened && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('请在系统设置中授予相机权限')),
+            );
+          }
+        } else {
+          // 普通拒绝，给出弹窗并可跳转设置
+          if (mounted) {
+            final goToSettings = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('需要相机权限'),
+                content: const Text('拍照功能需要相机权限，请前往系统设置授予权限。'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: const Text('取消'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: const Text('去设置'),
+                  ),
+                ],
+              ),
+            );
+            if (goToSettings == true) {
+              await openAppSettings();
+            }
+          }
         }
         return;
       }
@@ -211,24 +242,49 @@ class _ChatBoxState extends State<ChatBox> {
     });
 
     try {
-      // 调用API获取AI回复
-      final response = await QuestionApi.getQuestionGuide({
-        'question_id': widget.question!.id,
-        'new_message': _textController.text,
-        'session_id': _currentSessionId ?? '',
-      });
+      String aiMessage = '';
+      String sessionId = '';
+      if (widget.question != null) {
+        // 调用API获取AI回复
+        final response = await QuestionApi.getQuestionGuide({
+          'question_id': widget.question!.id,
+          'new_message': _textController.text,
+          'session_id': _currentSessionId ?? '',
+        });
 
-      String aiMessage = response['ai_message'] ?? '';
-      String sessionId = response['session_id'] ?? '';
+        aiMessage = response['ai_message'] ?? '';
+        sessionId = response['session_id'] ?? '';
 
-      // 更新session_id到本地存储
-      if (sessionId.isNotEmpty && widget.examId != null && widget.question?.id != null) {
-        await StorageManager.saveSessionId(widget.examId!, widget.question!.id, sessionId);
-        _currentSessionId = sessionId;
+        // 更新session_id到本地存储
+        if (sessionId.isNotEmpty && widget.examId != null && widget.question?.id != null) {
+          await StorageManager.saveSessionId(buildSessionKey(widget.examId, widget.question), sessionId);
+          _currentSessionId = sessionId;
+        }
+      } else {
+        // 调用API获取AI回复
+        final response = await QuestionApi.getGossipGuide({
+          'new_message': _textController.text,
+          'session_id': _currentSessionId ?? '',
+        });
+
+        aiMessage = response['ai_message'] ?? '';
+        sessionId = response['session_id'] ?? '';
+
+        // 更新session_id到本地存储
+        if (sessionId.isNotEmpty) {
+          await StorageManager.saveSessionId(buildSessionKey(null, null), sessionId);
+          _currentSessionId = sessionId;
+        }
       }
 
       _addAIMessage(aiMessage);
     } catch (e) {
+      // alert
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('发送消息失败: $e', style: TextStyle(color: Colors.white)), backgroundColor: Colors.red)
+        );
+      }
       throw Exception('发送消息失败: $e');
     }
 
@@ -262,10 +318,6 @@ class _ChatBoxState extends State<ChatBox> {
         title: Text(widget.question != null ? '题目助手' : 'AI助手'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         actions: [
           if (_isLoadingQuestion)
             const Padding(
@@ -280,7 +332,7 @@ class _ChatBoxState extends State<ChatBox> {
               ),
             ),
           IconButton(
-            icon: const Icon(Icons.clear_all),
+            icon: const Icon(Icons.clear_all_sharp),
             onPressed: _clearMessages,
             tooltip: '清空对话',
           ),
@@ -429,3 +481,14 @@ class ChatMessage extends StatelessWidget {
     );
   }
 } 
+
+String buildSessionKey(String? examId, Question? question) {
+  if (examId != null && question != null) {
+    return '${examId}_${question.id}';
+  } else if (examId != null) {
+    return examId;
+  } else if (question != null) {
+    return question.id;
+  }
+  return 'gossip';
+}

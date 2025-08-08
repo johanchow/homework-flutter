@@ -3,6 +3,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- 相机权限（用于拍照） -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <application
         android:label="琢器"
         android:name="${applicationName}"

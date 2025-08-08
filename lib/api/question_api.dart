@@ -26,4 +26,17 @@ class QuestionApi {
       'ai_message': aiMessage,
     };
   }
+
+  static Future<Map<String, String>> getGossipGuide(Map<String, String> params) async {
+    final response = await httpPost('/ai/gossip-chat', body: {
+      'new_message': params['new_message'],
+      'session_id': params['session_id'],
+    });
+    String sessionId = response['data']['session_id'] ?? '';
+    String aiMessage = response['data']['ai_message'] ?? '';
+    return {
+      'session_id': sessionId,
+      'ai_message': aiMessage,
+    };
+  }
 }

@@ -5,7 +5,7 @@ class StorageManager {
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'user_info';
   static const String _isLoggedInKey = 'is_logged_in';
-  static const String _sessionIdPrefix = 'session_id_';
+  static const String _sessionIdPrefix = 'session_';
   
   // 保存token
   static Future<void> saveToken(String token) async {
@@ -56,23 +56,23 @@ class StorageManager {
   }
   
   // 保存session_id
-  static Future<void> saveSessionId(String examId, String questionId, String sessionId) async {
+  static Future<void> saveSessionId(String sessionKey, String sessionId) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = '$_sessionIdPrefix${examId}_$questionId';
+    final key = '$_sessionIdPrefix-${sessionKey}';
     await prefs.setString(key, sessionId);
   }
   
   // 获取session_id
-  static Future<String?> getSessionId(String examId, String questionId) async {
+  static Future<String?> getSessionId(String sessionKey) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = '$_sessionIdPrefix${examId}_$questionId';
+    final key = '$_sessionIdPrefix-${sessionKey}';
     return prefs.getString(key);
   }
   
   // 清除特定题目的session_id
-  static Future<void> clearSessionId(String examId, String questionId) async {
+  static Future<void> clearSessionId(String sessionKey) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = '$_sessionIdPrefix${examId}_$questionId';
+    final key = '$_sessionIdPrefix-${sessionKey}';
     await prefs.remove(key);
   }
   
