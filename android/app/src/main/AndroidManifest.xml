@@ -3,10 +3,12 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- 相机权限（用于拍照） -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <application
-        android:label="homework_flutter"
+        android:label="琢器"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/homework_flutter_icon">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -46,4 +48,5 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
+    <uses-permission android:name="android.permission.INTERNET"/>
 </manifest>
