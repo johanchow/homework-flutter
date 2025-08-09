@@ -1,7 +1,17 @@
-import 'dart:convert';
 import 'api.dart';
 import '../entity/question.dart';
-import '../entity/session.dart';
+
+class AiChatRequest {
+  final String? question_id;
+  final String? session_id;
+  final PostChatMessage post_chat_message;
+
+  AiChatRequest({
+    this.question_id,
+    this.session_id,
+    required this.post_chat_message,
+  });
+}
 
 class QuestionApi {
   static Future<Question> getQuestion(String questionId) async {
@@ -13,11 +23,11 @@ class QuestionApi {
     return question;
   }
 
-  static Future<Map<String, String>> getQuestionGuide(Map<String, String> params) async {
+  static Future<Map<String, String>> getQuestionGuide(AiChatRequest r) async {
     final response = await httpPost('/ai/guide-question', body: {
-      'question_id': params['question_id'],
-      'new_message': params['new_message'],
-      'session_id': params['session_id'],
+      'question_id': r.question_id,
+      'new_message': r.post_chat_message,
+      'session_id': r.session_id,
     });
     String sessionId = response['data']['session_id'] ?? '';
     String aiMessage = response['data']['ai_message'] ?? '';
@@ -27,16 +37,33 @@ class QuestionApi {
     };
   }
 
-  static Future<Map<String, String>> getGossipGuide(Map<String, String> params) async {
+  static Future<Map<String, String>> getGossipGuide(AiChatRequest r) async {
     final response = await httpPost('/ai/gossip-chat', body: {
-      'new_message': params['new_message'],
-      'session_id': params['session_id'],
+      'new_message': r.post_chat_message,
+      'session_id': r.session_id,
     });
     String sessionId = response['data']['session_id'] ?? '';
     String aiMessage = response['data']['ai_message'] ?? '';
     return {
       'session_id': sessionId,
       'ai_message': aiMessage,
+    };
+  }
+}
+
+class PostChatMessage {
+  final String? image_url;
+  final String? text;
+
+  PostChatMessage({
+    this.image_url,
+    this.text,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'text': text,
+      'image_url': image_url,
     };
   }
 }
