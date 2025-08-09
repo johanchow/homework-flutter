@@ -3,14 +3,14 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../utils/storage_manager.dart';
+import '../utils/logger.dart';
 
 // 全局导航键，用于在非widget上下文中进行导航
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 String get baseUrl {
-  // final url = dotenv.env['API_BASE_URL'];
-  final url = 'http://192.168.10.103:5556/api';
-  if (url.isEmpty) {
+  final url = dotenv.env['API_BASE_URL'];
+  if (url == null || url.isEmpty) {
     throw Exception('API_BASE_URL环境变量未设置');
   }
   return url;
@@ -53,10 +53,11 @@ Future<Map<String, dynamic>> httpPost(
   String endpoint, {
   Map<String, dynamic>? body,
 }) async {
+  late Uri uri;
   try {
     final headers = await getHttpHeaders();
-    final uri = Uri.parse('$baseUrl$endpoint');
-    print('http post uri: $uri');
+    uri = Uri.parse('$baseUrl$endpoint');
+    logger.d('http post uri: $uri');
     
     final response = await http.post(
       uri,
@@ -66,6 +67,7 @@ Future<Map<String, dynamic>> httpPost(
     
     return await handleHttpResponse(response);
   } catch (e) {
+    logger.e('[Api]uri=$uri, error=$e');
     if (e.toString().contains('HTTP_401_UNAUTHORIZED')) {
       // 401错误已经在handleHttpResponse中处理了，这里不需要重复处理
       throw e;

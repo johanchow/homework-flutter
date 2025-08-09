@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:homework_flutter/utils/logger.dart';
 import 'package:record/record.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -7,6 +8,7 @@ import '../entity/question.dart';
 import '../entity/session.dart';
 import '../api/question_api.dart';
 import '../api/session_api.dart';
+import '../api/cos_api.dart';
 import '../utils/storage_manager.dart';
 
 class ChatBox extends StatefulWidget {
@@ -30,6 +32,8 @@ class ChatBox extends StatefulWidget {
 class _ChatBoxState extends State<ChatBox> {
   final TextEditingController _textController = TextEditingController();
   final List<ChatMessage> _messages = [];
+  // 未发送的消息（例如先选择/上传的图片，等待用户提出问题后一起发送）
+  final List<ChatMessage> _newMessages = [];
   final ScrollController _scrollController = ScrollController();
   final AudioRecorder _audioRecorder = AudioRecorder();
   final ImagePicker _imagePicker = ImagePicker();
@@ -213,14 +217,48 @@ class _ChatBoxState extends State<ChatBox> {
       );
 
       if (image != null) {
-        // 发送图片消息
-        setState(() {
-          _messages.add(ChatMessage(
-            text: '📷 图片: ${image.path}',
-            isUser: true,
-          ));
-        });
-        _scrollToBottom();
+        try {
+          // 显示上传中状态（加入未发送列表）
+          setState(() {
+            _newMessages.add(ChatMessage(
+              text: '📷 正在上传图片...',
+              isUser: true,
+              isLoading: true,
+              isPending: true,
+            ));
+          });
+          _scrollToBottom();
+
+          // 上传图片到腾讯云 COS
+          final imageUrl = await CosApi.uploadImage(image.path);
+
+          // 更新为上传完成的图片（仍在未发送列表中）
+          setState(() {
+            if (_newMessages.isNotEmpty) {
+              _newMessages.removeLast();
+            }
+            _newMessages.add(ChatMessage(
+              text: '📷 图片已上传',
+              isUser: true,
+              imageUrl: imageUrl,
+              isPending: true,
+            ));
+          });
+          _scrollToBottom();
+        } catch (e) {
+          // 上传失败，显示错误消息（未发送列表）
+          setState(() {
+            if (_newMessages.isNotEmpty) {
+              _newMessages.removeLast();
+            }
+            _newMessages.add(ChatMessage(
+              text: '❌ 图片上传失败: $e',
+              isUser: true,
+              isPending: true,
+            ));
+          });
+          _scrollToBottom();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -235,22 +273,36 @@ class _ChatBoxState extends State<ChatBox> {
     if (_textController.text.trim().isEmpty) return;
 
     setState(() {
-      _messages.add(ChatMessage(
+      _newMessages.add(ChatMessage(
         text: _textController.text,
         isUser: true,
       ));
+      // 将未发送的图片（已上传）一并展示在已发送前端，保持视觉一致
+      // 真正的语义合并在 API 成功后执行
     });
+    Map<String, String?> wrappedChatMessage = {};
+    for (var message in _newMessages) {
+      if (message.imageUrl != null) {
+        wrappedChatMessage['image_url'] = message.imageUrl;
+      } else {
+        wrappedChatMessage['text'] = message.text;
+      }
+    }
+    PostChatMessage postChatMessage = PostChatMessage(
+      text: wrappedChatMessage['text'],
+      image_url: wrappedChatMessage['image_url'],
+    );
 
     try {
       String aiMessage = '';
       String sessionId = '';
       if (widget.question != null) {
         // 调用API获取AI回复
-        final response = await QuestionApi.getQuestionGuide({
-          'question_id': widget.question!.id,
-          'new_message': _textController.text,
-          'session_id': _currentSessionId ?? '',
-        });
+        final response = await QuestionApi.getQuestionGuide(AiChatRequest(
+          question_id: widget.question!.id,
+          post_chat_message: postChatMessage,
+          session_id: _currentSessionId,
+        ));
 
         aiMessage = response['ai_message'] ?? '';
         sessionId = response['session_id'] ?? '';
@@ -262,10 +314,10 @@ class _ChatBoxState extends State<ChatBox> {
         }
       } else {
         // 调用API获取AI回复
-        final response = await QuestionApi.getGossipGuide({
-          'new_message': _textController.text,
-          'session_id': _currentSessionId ?? '',
-        });
+        final response = await QuestionApi.getGossipGuide(AiChatRequest(
+          post_chat_message: postChatMessage,
+          session_id: _currentSessionId,
+        ));
 
         aiMessage = response['ai_message'] ?? '';
         sessionId = response['session_id'] ?? '';
@@ -275,6 +327,21 @@ class _ChatBoxState extends State<ChatBox> {
           await StorageManager.saveSessionId(buildSessionKey(null, null), sessionId);
           _currentSessionId = sessionId;
         }
+      }
+
+      // 发送成功：把 _newMessages 合并到 _messages 并清空
+      if (_newMessages.isNotEmpty) {
+        setState(() {
+          // 去掉 pending 样式
+          _messages.addAll(_newMessages.map((m) => ChatMessage(
+                text: m.text,
+                isUser: m.isUser,
+                imageUrl: m.imageUrl,
+                isLoading: false,
+                isPending: false,
+              )));
+          _newMessages.clear();
+        });
       }
 
       _addAIMessage(aiMessage);
@@ -296,6 +363,7 @@ class _ChatBoxState extends State<ChatBox> {
     setState(() {
       _messages.clear();
     });
+    StorageManager.clearSessionId(buildSessionKey(widget.examId, widget.question));
     _initializeChat();
   }
 
@@ -349,9 +417,14 @@ class _ChatBoxState extends State<ChatBox> {
               child: ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.all(16),
-                itemCount: _messages.length,
+                itemCount: _messages.length + _newMessages.length,
                 itemBuilder: (context, index) {
-                  return _messages[index];
+                  if (index < _messages.length) {
+                    return _messages[index];
+                  } else {
+                    final pending = _newMessages[index - _messages.length];
+                    return pending;
+                  }
                 },
               ),
             ),
@@ -437,11 +510,18 @@ class _ChatBoxState extends State<ChatBox> {
 class ChatMessage extends StatelessWidget {
   final String text;
   final bool isUser;
+  final String? imageUrl;
+  final bool isLoading;
+  // 是否未正式发送（位于 _newMessages 中）
+  final bool isPending;
 
   const ChatMessage({
     super.key,
     required this.text,
     required this.isUser,
+    this.imageUrl,
+    this.isLoading = false,
+    this.isPending = false,
   });
 
   @override
@@ -466,12 +546,111 @@ class ChatMessage extends StatelessWidget {
                 color: isUser ? Colors.blue : Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Text(
-                text,
-                style: TextStyle(
-                  color: isUser ? Colors.white : Colors.black87,
-                  fontSize: 16,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isLoading)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          text,
+                          style: TextStyle(
+                            color: isUser ? Colors.white : Colors.black87,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    )
+                  else if (imageUrl != null)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            imageUrl!,
+                            width: 200,
+                            height: 150,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                width: 200,
+                                height: 150,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: 200,
+                                height: 150,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Center(
+                                  child: Icon(Icons.error, color: Colors.red),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (isPending)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.orange.withOpacity(0.4)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.info_outline, size: 14, color: Colors.orange),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '请提出你的问题',
+                                  style: TextStyle(
+                                    color: Colors.orange[800],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Text(
+                            text,
+                            style: TextStyle(
+                              color: isUser ? Colors.white : Colors.black87,
+                              fontSize: 14,
+                            ),
+                          ),
+                      ],
+                    )
+                  else
+                    Text(
+                      text,
+                      style: TextStyle(
+                        color: isUser ? Colors.white : Colors.black87,
+                        fontSize: 16,
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
