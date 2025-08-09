@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import '../utils/logger.dart';
+import '../services/tts_service.dart';
 
 class TtsButtonWidget extends StatefulWidget {
   final String sentence;
@@ -11,56 +13,93 @@ class TtsButtonWidget extends StatefulWidget {
 }
 
 class _TtsButtonWidgetState extends State<TtsButtonWidget> {
-  final FlutterTts flutterTts = FlutterTts();
+  final FlutterTts flutterTts = TtsService.instance.tts;
   bool _isPlaying = false;
+  Future<void>? _initFuture;
 
   @override
   void initState() {
     super.initState();
+    _initFuture = _initTts();
+  }
 
-    // 设置播放完成监听器
-    flutterTts.setCompletionHandler(() {
-      if (mounted) {
+  Future<void> _initTts() async {
+    try {
+      await TtsService.instance.ensureInitialized();
+
+      // 事件监听器
+      flutterTts.setStartHandler(() {
+        if (!mounted) return;
+        setState(() {
+          _isPlaying = true;
+        });
+      });
+
+      flutterTts.setCompletionHandler(() {
+        if (!mounted) return;
         setState(() {
           _isPlaying = false;
         });
-      }
-    });
+      });
 
-    flutterTts.setErrorHandler((msg) {
-      if (mounted) {
+      flutterTts.setCancelHandler(() {
+        if (!mounted) return;
         setState(() {
           _isPlaying = false;
         });
-      }
-    });
+      });
 
-    flutterTts.setSpeechRate(0.45);
+      flutterTts.setErrorHandler((msg) {
+        logger.e('TTS Error: $msg');
+        if (!mounted) return;
+        setState(() {
+          _isPlaying = false;
+        });
+      });
+    } catch (e) {
+      logger.e('TTS init failed: $e');
+    }
   }
 
-  bool _containsChinese(String text) {
-    // 中文字符范围 \u4e00-\u9fff
-    return RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
-  }
+  // 由全局 TTS 服务进行语言解析，这里不再需要局部中文检测
 
   Future<void> _playAudio() async {
-    if (_isPlaying || widget.sentence.trim().isEmpty) return;
+    logger.i("playAudio: ${widget.sentence}");
+    if (widget.sentence.trim().isEmpty) return;
 
-    setState(() {
-      _isPlaying = true;
-    });
+    // 确保初始化完成
+    await (_initFuture ?? Future.value());
 
-    await flutterTts.stop();
+    if (_isPlaying) {
+      await TtsService.instance.stop();
+    }
 
-    // 自动判断语言
-    final isChinese = _containsChinese(widget.sentence);
-    await flutterTts.setLanguage(isChinese ? "zh-CN" : "en-US");
+    final ok = await TtsService.instance.speakWithRetries(widget.sentence);
+    if (mounted) {
+      setState(() {
+        _isPlaying = ok;
+      });
+    }
+  }
 
-    await flutterTts.speak(widget.sentence).then((_) {
-      print("Speech started successfully");
-    }).catchError((e) {
-      print("Error in speaking: $e");
-    });
+  Future<void> _stopAudio() async {
+    try {
+      await flutterTts.stop();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPlaying = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _togglePlay() async {
+    if (_isPlaying) {
+      await _stopAudio();
+    } else {
+      await _playAudio();
+    }
   }
 
   @override
@@ -103,7 +142,7 @@ class _TtsButtonWidgetState extends State<TtsButtonWidget> {
               color: Colors.green,
               size: 32,
             ),
-            onPressed: _isPlaying ? null : _playAudio,
+            onPressed: _togglePlay,
           ),
         ],
       ),
