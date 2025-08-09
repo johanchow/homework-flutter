@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:homework_flutter/utils/logger.dart';
 import 'package:record/record.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
+import 'dart:async';
 import '../entity/question.dart';
 import '../entity/session.dart';
 import '../api/question_api.dart';
 import '../api/session_api.dart';
 import '../api/cos_api.dart';
 import '../utils/storage_manager.dart';
+import '../services/asr_service.dart';
 
 class ChatBox extends StatefulWidget {
   final String? examId;
@@ -37,7 +38,7 @@ class _ChatBoxState extends State<ChatBox> {
   final ScrollController _scrollController = ScrollController();
   final AudioRecorder _audioRecorder = AudioRecorder();
   final ImagePicker _imagePicker = ImagePicker();
-  Question? _currentQuestion;
+  late final AsrService _asrService;
   bool _isLoadingQuestion = false;
   bool _isRecording = false;
   String? _currentSessionId;
@@ -45,6 +46,15 @@ class _ChatBoxState extends State<ChatBox> {
   @override
   void initState() {
     super.initState();
+    _asrService = AsrService((text, isFinal) {
+      if (!mounted) return;
+      setState(() {
+        _textController.text = text;
+        _textController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _textController.text.length),
+        );
+      });
+    });
     _initializeChat();
   }
 
@@ -92,6 +102,7 @@ class _ChatBoxState extends State<ChatBox> {
     _textController.dispose();
     _scrollController.dispose();
     _audioRecorder.dispose();
+    _asrService.dispose();
     super.dispose();
   }
 
@@ -122,6 +133,9 @@ class _ChatBoxState extends State<ChatBox> {
         _isRecording = true;
       });
       
+      // 启动 ASR 实时识别（AsrService 构造时已完成初始化与回调绑定）
+      unawaited(_asrService.start());
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('开始录音，长按结束')),
@@ -142,17 +156,11 @@ class _ChatBoxState extends State<ChatBox> {
       setState(() {
         _isRecording = false;
       });
+      await _asrService.stop();
       
       if (path != null) {
         // 这里可以添加语音转文字的功能
-        // 暂时发送录音文件路径作为消息
-        setState(() {
-          _messages.add(ChatMessage(
-            text: '🎤 语音消息: $path',
-            isUser: true,
-          ));
-        });
-        _scrollToBottom();
+        // 已集成 ASR：实时结果已回填到输入框，这里不再自动发送
       }
     } catch (e) {
       if (mounted) {
