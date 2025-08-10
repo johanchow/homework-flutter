@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import '../utils/logger.dart';
 import '../services/tts_service.dart';
 
@@ -26,8 +25,6 @@ class _TtsButtonWidgetState extends State<TtsButtonWidget> {
 
   Future<void> _initTts() async {
     try {
-      await _ttsService.ensureInitialized();
-      
       // 设置事件监听器
       _ttsService.tts.setStartHandler(() {
         if (!mounted) return;

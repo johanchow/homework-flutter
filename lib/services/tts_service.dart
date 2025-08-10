@@ -5,14 +5,16 @@ import '../utils/logger.dart';
 class TtsService {
   final FlutterTts _flutterTts = FlutterTts();
   bool _isInitialized = false;
-  Future<void>? _initFuture;
 
   FlutterTts get tts => _flutterTts;
 
+  TtsService() {
+    _init();
+  }
+
   Future<void> ensureInitialized() async {
     if (_isInitialized) return;
-    _initFuture ??= _init();
-    await _initFuture;
+    await _init();
   }
 
   Future<void> _init() async {
