@@ -38,9 +38,9 @@ class AsrService {
     _config.appID = int.parse(dotenv.env['ASR_APP_ID'] ?? '0');
     _config.secretID = dotenv.env['ASR_SECRET_ID'] ?? '';
     _config.secretKey = dotenv.env['ASR_SECRET_KEY'] ?? '';
-    _config.token = dotenv.env['ASR_TOKEN'] ?? '';
+    // _config.token = dotenv.env['ASR_TOKEN'] ?? '';
     // 更多参数设置： https://cloud.tencent.com/document/product/1093/86888
-    _config.setCustomParam('emotion_recognition', 2);
+    // _config.setCustomParam('emotion_recognition', 2); // 情绪识别
     if (extraParams != null) {
       for (final entry in extraParams.entries) {
         _config.setCustomParam(entry.key, entry.value);
@@ -85,8 +85,8 @@ class AsrService {
             break;
         }
       }
-    } catch (e) {
-      logger.e('[AsrService] start error: $e');
+    } on ASRError catch (e) {
+      logger.e('ASR错误码：${e.code} 错误信息: ${e.message}'); 
       rethrow;
     }
   }
