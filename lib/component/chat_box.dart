@@ -9,8 +9,9 @@ import '../entity/session.dart';
 import '../api/question_api.dart';
 import '../api/session_api.dart';
 import '../api/cos_api.dart';
-import '../utils/storage_manager.dart';
 import '../services/asr_service.dart';
+import '../utils/storage_manager.dart';
+import '../utils/logger.dart';
 
 class ChatBox extends StatefulWidget {
   final String? examId;
@@ -42,6 +43,9 @@ class _ChatBoxState extends State<ChatBox> {
   bool _isLoadingQuestion = false;
   bool _isRecording = false;
   String? _currentSessionId;
+  // 语音识别实时结果
+  String _recognizedText = '';
+  bool _isRecognizing = false;
 
   @override
   void initState() {
@@ -49,10 +53,15 @@ class _ChatBoxState extends State<ChatBox> {
     _asrService = AsrService((text, isFinal) {
       if (!mounted) return;
       setState(() {
-        _textController.text = text;
-        _textController.selection = TextSelection.fromPosition(
-          TextPosition(offset: _textController.text.length),
-        );
+        _recognizedText = text;
+        _isRecognizing = !isFinal && text.isNotEmpty;
+        // 只有在最终结果时才更新输入框
+        if (isFinal && text.isNotEmpty) {
+          _textController.text = text;
+          _textController.selection = TextSelection.fromPosition(
+            TextPosition(offset: _textController.text.length),
+          );
+        }
       });
     });
     _initializeChat();
@@ -108,6 +117,7 @@ class _ChatBoxState extends State<ChatBox> {
 
   // 语音输入功能
   Future<void> _startVoiceRecording() async {
+    logger.d('检测到长按，进行回调');
     try {
       // 请求麦克风权限
       final status = await Permission.microphone.request();
@@ -124,24 +134,27 @@ class _ChatBoxState extends State<ChatBox> {
       final tempDir = await getTemporaryDirectory();
       final recordingPath = '${tempDir.path}/voice_message_${DateTime.now().millisecondsSinceEpoch}.m4a';
       
+      logger.d('开始录音了');
       await _audioRecorder.start(
         const RecordConfig(),
         path: recordingPath,
       );
       
+      logger.d('UI显示录音中状态');
       setState(() {
         _isRecording = true;
+        _recognizedText = '';
+        _isRecognizing = true;
       });
       
       // 启动 ASR 实时识别（AsrService 构造时已完成初始化与回调绑定）
       unawaited(_asrService.start());
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('开始录音，长按结束')),
-        );
-      }
     } catch (e) {
+      setState(() {
+        _isRecording = false;
+        _isRecognizing = false;
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('录音失败: $e')),
@@ -151,18 +164,25 @@ class _ChatBoxState extends State<ChatBox> {
   }
 
   Future<void> _stopVoiceRecording() async {
+    logger.e('检测到停止长按，进行回调');
     try {
-      final path = await _audioRecorder.stop();
+      await _audioRecorder.stop();
+      logger.e('UI显示录音结束');
       setState(() {
         _isRecording = false;
+        // 不立即设置 _isRecognizing = false，让 ASR 继续处理
       });
+      
+      // 优雅停止 ASR，让它继续处理剩余的音频数据
       await _asrService.stop();
       
-      if (path != null) {
-        // 这里可以添加语音转文字的功能
-        // 已集成 ASR：实时结果已回填到输入框，这里不再自动发送
-      }
+      // 识别结果会在 AsrService 的回调中自动处理
+      // 当收到最终结果时，_isRecognizing 会被设置为 false
     } catch (e) {
+      setState(() {
+        _isRecording = false;
+        _isRecognizing = false;
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('停止录音失败: $e')),
@@ -439,6 +459,75 @@ class _ChatBoxState extends State<ChatBox> {
           ),
           Column(
             children: [
+              // 实时语音识别结果显示区域
+              if (_isRecognizing && _recognizedText.isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.mic,
+                            color: Colors.red,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '正在识别...',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Text(
+                          _recognizedText,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '松开结束录音',
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -454,14 +543,33 @@ class _ChatBoxState extends State<ChatBox> {
                 child: Row(
                   children: [
                     // 语音输入按钮 - 长按录音
-                    GestureDetector(
-                      onLongPressStart: (_) => _startVoiceRecording(),
-                      onLongPressEnd: (_) => _stopVoiceRecording(),
+                    Listener(
+                      onPointerDown: (_) {
+                        logger.d('手指按下');
+                        _startVoiceRecording();
+                      },
+                      onPointerUp: (_) {
+                        logger.d('手指抬起');
+                        _stopVoiceRecording();
+                      },
+                      onPointerCancel: (_) {
+                        logger.d('手指取消');
+                        _stopVoiceRecording();
+                      },
                       child: Container(
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _isRecording ? Colors.red.shade50 : Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: _isRecording ? Colors.red : Colors.blue,
+                            width: 2,
+                          ),
+                        ),
                         child: Icon(
                           _isRecording ? Icons.stop : Icons.mic,
                           color: _isRecording ? Colors.red : Colors.blue,
+                          size: 20,
                         ),
                       ),
                     ),
