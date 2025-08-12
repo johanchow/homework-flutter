@@ -40,12 +40,16 @@ class _ChatBoxState extends State<ChatBox> {
   final AudioRecorder _audioRecorder = AudioRecorder();
   final ImagePicker _imagePicker = ImagePicker();
   late final AsrService _asrService;
-  bool _isLoadingQuestion = false;
+  final bool _isLoadingQuestion = false;
   bool _isRecording = false;
   String? _currentSessionId;
   // 语音识别实时结果
   String _recognizedText = '';
   bool _isRecognizing = false;
+  // 是否为文本模式（点击切换按钮后，是录音模式）
+  bool _isTextMode = false;
+  // 是否显示文本输入框(录音结束会展示文本输入框)
+  bool _showTextInput = false;
 
   @override
   void initState() {
@@ -61,6 +65,10 @@ class _ChatBoxState extends State<ChatBox> {
           _textController.selection = TextSelection.fromPosition(
             TextPosition(offset: _textController.text.length),
           );
+          // 录音结束后显示文本输入框
+          setState(() {
+            _showTextInput = true;
+          });
         }
       });
     });
@@ -300,6 +308,13 @@ class _ChatBoxState extends State<ChatBox> {
   void _sendMessage() async {
     if (_textController.text.trim().isEmpty) return;
 
+    // 发送后隐藏文本输入框（如果不是文本模式）
+    if (!_isTextMode) {
+      setState(() {
+        _showTextInput = false;
+      });
+    }
+
     setState(() {
       _newMessages.add(ChatMessage(
         text: _textController.text,
@@ -308,6 +323,8 @@ class _ChatBoxState extends State<ChatBox> {
       // 将未发送的图片（已上传）一并展示在已发送前端，保持视觉一致
       // 真正的语义合并在 API 成功后执行
     });
+    // 添加用户消息后立即滚动到底部
+    _scrollToBottom();
     Map<String, String?> wrappedChatMessage = {};
     for (var message in _newMessages) {
       if (message.imageUrl != null) {
@@ -370,6 +387,8 @@ class _ChatBoxState extends State<ChatBox> {
               )));
           _newMessages.clear();
         });
+        // 合并消息后滚动到底部
+        _scrollToBottom();
       }
 
       _addAIMessage(aiMessage);
@@ -385,6 +404,13 @@ class _ChatBoxState extends State<ChatBox> {
 
     _textController.clear();
     _scrollToBottom();
+    
+    // 在文本模式下，发送后保持文本框显示
+    if (_isTextMode) {
+      setState(() {
+        _showTextInput = true;
+      });
+    }
   }
 
   void _clearMessages() {
@@ -395,12 +421,38 @@ class _ChatBoxState extends State<ChatBox> {
     _initializeChat();
   }
 
+  // 切换输入模式
+  void _toggleInputMode() {
+    setState(() {
+      _isTextMode = !_isTextMode;
+      if (_isTextMode) {
+        _showTextInput = true;
+        _textController.clear();
+      } else {
+        _showTextInput = false;
+        _textController.clear();
+      }
+    });
+  }
+
   void _scrollToBottom() {
-    Future.delayed(const Duration(milliseconds: 100), () {
+    // 使用多个延迟确保在不同情况下都能正确滚动
+    Future.delayed(const Duration(milliseconds: 50), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+    
+    // 额外延迟确保在布局完成后滚动
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
       }
@@ -446,6 +498,8 @@ class _ChatBoxState extends State<ChatBox> {
                 controller: _scrollController,
                 padding: const EdgeInsets.all(16),
                 itemCount: _messages.length + _newMessages.length,
+                reverse: false,
+                physics: const BouncingScrollPhysics(),
                 itemBuilder: (context, index) {
                   if (index < _messages.length) {
                     return _messages[index];
@@ -528,6 +582,63 @@ class _ChatBoxState extends State<ChatBox> {
                     ],
                   ),
                 ),
+              // 文本输入框区域（录音结束后或文本模式时显示）
+              if (_showTextInput)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          constraints: const BoxConstraints(
+                            minHeight: 40,
+                            maxHeight: 120,
+                          ),
+                          child: TextField(
+                            controller: _textController,
+                            maxLines: null,
+                            expands: true,
+                            textAlignVertical: TextAlignVertical.center,
+                            decoration: InputDecoration(
+                              hintText: '输入你的问题...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey.shade50,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: IconButton(
+                          onPressed: _sendMessage,
+                          icon: const Icon(Icons.send, color: Colors.white),
+                          iconSize: 20,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              // 底部操作栏
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -542,74 +653,88 @@ class _ChatBoxState extends State<ChatBox> {
                 ),
                 child: Row(
                   children: [
-                    // 语音输入按钮 - 长按录音
-                    Listener(
-                      onPointerDown: (_) {
-                        logger.d('手指按下');
-                        _startVoiceRecording();
-                      },
-                      onPointerUp: (_) {
-                        logger.d('手指抬起');
-                        _stopVoiceRecording();
-                      },
-                      onPointerCancel: (_) {
-                        logger.d('手指取消');
-                        _stopVoiceRecording();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: _isRecording ? Colors.red.shade50 : Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: _isRecording ? Colors.red : Colors.blue,
-                            width: 2,
-                          ),
-                        ),
-                        child: Icon(
-                          _isRecording ? Icons.stop : Icons.mic,
-                          color: _isRecording ? Colors.red : Colors.blue,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     // 拍照按钮
                     GestureDetector(
                       onTap: _takePhoto,
                       child: Container(
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         child: const Icon(
                           Icons.camera_alt,
                           color: Colors.blue,
+                          size: 24,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
+                    // 中间区域：录音按钮或空白
                     Expanded(
-                      child: TextField(
-                        controller: _textController,
-                        decoration: InputDecoration(
-                          hintText: '输入你的问题...',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                        ),
-                        onSubmitted: (_) => _sendMessage(),
-                      ),
+                      child: _isTextMode
+                          ? const SizedBox.shrink() // 文本模式下中间留空白
+                          : Listener(
+                              onPointerDown: (_) {
+                                logger.d('手指按下');
+                                _startVoiceRecording();
+                              },
+                              onPointerUp: (_) {
+                                logger.d('手指抬起');
+                                _stopVoiceRecording();
+                              },
+                              onPointerCancel: (_) {
+                                logger.d('手指取消');
+                                _stopVoiceRecording();
+                              },
+                              child: Container(
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: _isRecording ? Colors.red.shade50 : Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(
+                                    color: _isRecording ? Colors.red : Colors.blue,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      _isRecording ? Icons.stop : Icons.mic,
+                                      color: _isRecording ? Colors.red : Colors.blue,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _isRecording ? '松开结束' : '按住说话',
+                                      style: TextStyle(
+                                        color: _isRecording ? Colors.red : Colors.blue,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: _sendMessage,
-                      icon: const Icon(Icons.send),
-                      color: Colors.blue,
+                    const SizedBox(width: 12),
+                    // 切换按钮
+                    GestureDetector(
+                      onTap: _toggleInputMode,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: _isTextMode ? Colors.blue.shade100 : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          _isTextMode ? Icons.mic : Icons.keyboard,
+                          color: _isTextMode ? Colors.blue : Colors.grey.shade600,
+                          size: 24,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -729,9 +854,9 @@ class ChatMessage extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.15),
+                              color: Colors.orange.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.orange.withOpacity(0.4)),
+                              border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
