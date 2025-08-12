@@ -9,8 +9,9 @@ import '../entity/session.dart';
 import '../api/question_api.dart';
 import '../api/session_api.dart';
 import '../api/cos_api.dart';
-import '../utils/storage_manager.dart';
 import '../services/asr_service.dart';
+import '../utils/storage_manager.dart';
+import '../utils/logger.dart';
 
 class ChatBox extends StatefulWidget {
   final String? examId;
@@ -116,6 +117,7 @@ class _ChatBoxState extends State<ChatBox> {
 
   // 语音输入功能
   Future<void> _startVoiceRecording() async {
+    logger.d('检测到长按，进行回调');
     try {
       // 请求麦克风权限
       final status = await Permission.microphone.request();
@@ -132,11 +134,13 @@ class _ChatBoxState extends State<ChatBox> {
       final tempDir = await getTemporaryDirectory();
       final recordingPath = '${tempDir.path}/voice_message_${DateTime.now().millisecondsSinceEpoch}.m4a';
       
+      logger.d('开始录音了');
       await _audioRecorder.start(
         const RecordConfig(),
         path: recordingPath,
       );
       
+      logger.d('UI显示录音中状态');
       setState(() {
         _isRecording = true;
         _recognizedText = '';
@@ -160,23 +164,20 @@ class _ChatBoxState extends State<ChatBox> {
   }
 
   Future<void> _stopVoiceRecording() async {
+    logger.e('检测到停止长按，进行回调');
     try {
       await _audioRecorder.stop();
+      logger.e('UI显示录音结束');
       setState(() {
         _isRecording = false;
-        _isRecognizing = false;
+        // 不立即设置 _isRecognizing = false，让 ASR 继续处理
       });
+      
+      // 优雅停止 ASR，让它继续处理剩余的音频数据
       await _asrService.stop();
       
-      // 如果有识别结果，将其设置到输入框
-      if (_recognizedText.isNotEmpty) {
-        setState(() {
-          _textController.text = _recognizedText;
-          _textController.selection = TextSelection.fromPosition(
-            TextPosition(offset: _textController.text.length),
-          );
-        });
-      }
+      // 识别结果会在 AsrService 的回调中自动处理
+      // 当收到最终结果时，_isRecognizing 会被设置为 false
     } catch (e) {
       setState(() {
         _isRecording = false;
@@ -542,9 +543,19 @@ class _ChatBoxState extends State<ChatBox> {
                 child: Row(
                   children: [
                     // 语音输入按钮 - 长按录音
-                    GestureDetector(
-                      onLongPressStart: (_) => _startVoiceRecording(),
-                      onLongPressEnd: (_) => _stopVoiceRecording(),
+                    Listener(
+                      onPointerDown: (_) {
+                        logger.d('手指按下');
+                        _startVoiceRecording();
+                      },
+                      onPointerUp: (_) {
+                        logger.d('手指抬起');
+                        _stopVoiceRecording();
+                      },
+                      onPointerCancel: (_) {
+                        logger.d('手指取消');
+                        _stopVoiceRecording();
+                      },
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(

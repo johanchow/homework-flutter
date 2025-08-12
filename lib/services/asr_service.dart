@@ -91,12 +91,14 @@ class AsrService {
     }
   }
 
-  /// 停止识别
+  /// 优雅停止识别（等待最终结果）
   Future<void> stop() async {
     try {
+      // 发送停止信号，但让 ASR 继续处理剩余的音频数据
       await _controller?.stop();
+      logger.d('[AsrService] 发送停止信号，等待最终识别结果');
     } catch (e) {
-      logger.e('[AsrService] stop error: $e');
+      logger.e('[AsrService] stopGracefully error: $e');
     }
   }
 
