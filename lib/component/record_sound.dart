@@ -214,11 +214,12 @@ class _RecordSoundWidgetState extends State<RecordSoundWidget> {
   Widget _buildStartButton() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red[50],
+        // color: Colors.blue[80],
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red[200]!),
+        border: Border.all(color: Colors.grey[300]!),
+        // border: Border.all(color: Colors.red[200]!),
       ),
       child: Column(
         children: [
@@ -227,7 +228,7 @@ class _RecordSoundWidgetState extends State<RecordSoundWidget> {
             icon: const Icon(Icons.mic),
             label: const Text('开始录音作答'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(

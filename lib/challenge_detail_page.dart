@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'services/api_service.dart';
 import 'api/exam_api.dart';
 import 'entity/question.dart';
@@ -29,6 +31,8 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
   final Map<String, String> _selectedChoices = {};
   final Map<String, String> _textAnswers = {};
   final Map<String, String> _recordingPaths = {};
+  final Map<String, String> _videoPaths = {};
+  final Map<String, bool> _checkboxStates = {};
 
   @override
   void initState() {
@@ -315,8 +319,8 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
   }
 
   Widget _buildAnswerInput(Question question) {
-    switch (question.type.name) {
-      case 'choice':
+    switch (question.type) {
+      case QuestionType.choice:
         if (question.options.isNotEmpty) {
           return Column(
             children: List.generate(
@@ -364,23 +368,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
         }
         break;
         
-      case 'fill':
-        return TextField(
-          controller: TextEditingController(text: _textAnswers[question.id] ?? ''),
-          decoration: InputDecoration(
-            hintText: '请输入答案',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            contentPadding: const EdgeInsets.all(12),
-          ),
-          onChanged: (value) {
-            _textAnswers[question.id] = value;
-            _answers[question.id] = value;
-          },
-        );
-        
-      case 'reading':
+      case QuestionType.reading:
         return RecordSoundWidget(
           onRecordingComplete: (String path) {
             setState(() {
@@ -391,7 +379,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
           },
         );
         
-      case 'qa':
+      case QuestionType.essay:
         return TextField(
           controller: TextEditingController(text: _textAnswers[question.id] ?? ''),
           maxLines: 4,
@@ -408,7 +396,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
           },
         );
         
-      case 'summary':
+      case QuestionType.talking:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -423,12 +411,161 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
             ),
           ],
         );
+
+      case QuestionType.checking:
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Checkbox(
+                value: _checkboxStates[question.id] ?? false,
+                onChanged: (bool? value) {
+                  setState(() {
+                    _checkboxStates[question.id] = value ?? false;
+                    _answers[question.id] = value.toString();
+                  });
+                },
+                activeColor: Colors.blue,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                '已完成',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        );
+
+      case QuestionType.show:
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            children: [
+              // 如果还没有录制视频，显示录制按钮
+              if (_videoPaths[question.id] == null || _videoPaths[question.id]!.isEmpty)
+                ElevatedButton.icon(
+                  onPressed: () => _recordVideo(question.id),
+                  icon: const Icon(Icons.videocam),
+                  label: const Text('开始录制视频'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+            
+              // 如果已经录制了视频，显示视频播放器和重新录制按钮
+              if (_videoPaths[question.id] != null && _videoPaths[question.id]!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                VideoPlayerWidget(videoUrl: _videoPaths[question.id]!),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _recordVideo(question.id),
+                      icon: const Icon(Icons.videocam),
+                      label: const Text('重新录制'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => _deleteVideo(question.id),
+                      icon: const Icon(Icons.delete),
+                      label: const Text('删除视频'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        );
         
       default:
         return const SizedBox.shrink();
     }
     
     return const SizedBox.shrink();
+  }
+
+  // 录制视频方法
+  Future<void> _recordVideo(String questionId) async {
+    try {
+      // 检查相机权限
+      var status = await Permission.camera.status;
+      if (!status.isGranted) {
+        status = await Permission.camera.request();
+        if (!status.isGranted) {
+          ApiService.showError(context, '需要相机权限才能录制视频');
+          return;
+        }
+      }
+
+      // 检查麦克风权限
+      var micStatus = await Permission.microphone.status;
+      if (!micStatus.isGranted) {
+        micStatus = await Permission.microphone.request();
+        if (!micStatus.isGranted) {
+          ApiService.showError(context, '需要麦克风权限才能录制视频');
+          return;
+        }
+      }
+
+      // 使用image_picker录制视频
+      final ImagePicker picker = ImagePicker();
+      final XFile? video = await picker.pickVideo(
+        source: ImageSource.camera,
+        maxDuration: const Duration(minutes: 5), // 最大录制5分钟
+      );
+
+      if (video != null) {
+        setState(() {
+          _videoPaths[questionId] = video.path;
+          _answers[questionId] = video.path;
+        });
+        ApiService.showSuccess(context, '视频录制完成！');
+      }
+    } catch (e) {
+      ApiService.showError(context, '录制视频失败: $e');
+    }
+  }
+
+  // 删除视频方法
+  void _deleteVideo(String questionId) {
+    setState(() {
+      _videoPaths.remove(questionId);
+      _answers.remove(questionId);
+    });
+    ApiService.showSuccess(context, '视频已删除');
   }
 
   @override
