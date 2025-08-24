@@ -1,9 +1,12 @@
 enum QuestionType {
   choice('选择题'),
-  fill('填空题'),
-  qa('简答题'),
+  essay('简答题'),
+  checking('自查题'),
   reading('阅读题'),
-  summary('总结题');
+  talking('口述题'),
+  summary('总结题'),
+  show('展示题'),
+  checkbox('复选框');
 
   final String label;
 
@@ -65,11 +68,11 @@ class Question {
 
   // 辅助方法：解析题目类型
   static QuestionType _parseQuestionType(dynamic type) {
-    if (type == null) return QuestionType.qa;
+    if (type == null) return QuestionType.essay;
     try {
       return QuestionType.values.firstWhere((e) => e.name == type);
     } catch (e) {
-      return QuestionType.qa; // 默认返回简答题
+      return QuestionType.essay; // 默认返回简答题
     }
   }
 
