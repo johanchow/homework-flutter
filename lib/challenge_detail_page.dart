@@ -172,7 +172,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
             ],
 
             // 如果是阅读题目，则把material用tts_button组件渲染，方便直接发音阅读
-            if (question.type.name == 'reading') ...[
+            if (question.type == QuestionType.reading) ...[
               Padding(
                 padding: const EdgeInsets.only(bottom: 12.0),
                 child: TtsButtonWidget(
@@ -861,6 +861,10 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
 
   void _submitAnswers() async {
     for (var question in _questions) {
+      if ([QuestionType.talking, QuestionType.reading].contains(question.type) && _answers[question.id] != null) {
+        final audioUrl = await CosApi.uploadAudio(_answers[question.id]!);
+        _answers[question.id] = audioUrl;
+      }
       if (question.type == QuestionType.show && _answers[question.id] != null) {
         final videoUrl = await CosApi.uploadVideo(_answers[question.id]!);
         _answers[question.id] = videoUrl;

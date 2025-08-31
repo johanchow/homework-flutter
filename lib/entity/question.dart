@@ -4,7 +4,6 @@ enum QuestionType {
   checking('自查题'),
   reading('阅读题'),
   talking('口述题'),
-  summary('总结题'),
   show('展示题'),
   checkbox('复选框');
 
