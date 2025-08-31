@@ -631,12 +631,13 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                     ],
                   ),
                 )
-              : Column(
-                  children: [
-                    // 挑战信息卡片
-                    Container(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Card(
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 挑战信息卡片
+                      Card(
                         elevation: 4,
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -673,52 +674,44 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                           ),
                         ),
                       ),
-                    ),
-                    
-                    // 题目列表
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '题目列表',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            if (_questions.isNotEmpty)
-                              ...List.generate(
-                                _questions.length,
-                                (index) => _buildQuestionCard(
-                                  _questions[index],
-                                  index,
-                                ),
-                              )
-                            else
-                              const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(32.0),
-                                  child: Text(
-                                    '暂无题目',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            
-                            const SizedBox(height: 10),
-                          ],
+                      
+                      const SizedBox(height: 24),
+                      
+                      // 题目列表
+                      const Text(
+                        '题目列表',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      
+                      if (_questions.isNotEmpty)
+                        ...List.generate(
+                          _questions.length,
+                          (index) => _buildQuestionCard(
+                            _questions[index],
+                            index,
+                          ),
+                        )
+                      else
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(32.0),
+                            child: Text(
+                              '暂无题目',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ),
+                      
+                      const SizedBox(height: 100), // 底部留白，避免被 bottomNavigationBar 遮挡
+                    ],
+                  ),
                 ),
       bottomNavigationBar: _isLoading || _error != null
           ? null
