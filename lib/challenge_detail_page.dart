@@ -420,27 +420,36 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
             border: Border.all(color: Colors.grey[300]!),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Row(
-            children: [
-              Checkbox(
-                value: _checkboxStates[question.id] ?? false,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _checkboxStates[question.id] = value ?? false;
-                    _answers[question.id] = value;
-                  });
-                },
-                activeColor: Colors.blue,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                '已完成',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                final currentValue = _checkboxStates[question.id] ?? false;
+                _checkboxStates[question.id] = !currentValue;
+                _answers[question.id] = !currentValue;
+              });
+            },
+            child: Row(
+              children: [
+                Checkbox(
+                  value: _checkboxStates[question.id] ?? false,
+                  onChanged: (bool? value) {
+                    setState(() {
+                      _checkboxStates[question.id] = value ?? false;
+                      _answers[question.id] = value ?? false;
+                    });
+                  },
+                  activeColor: Colors.blue,
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                const Text(
+                  '已完成',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
 
