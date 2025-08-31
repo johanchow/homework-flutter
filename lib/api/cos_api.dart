@@ -102,6 +102,117 @@ class CosApi {
     }
   }
 
+  static Future<String> uploadVideo(String filePath, {String? fileName}) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        throw Exception('文件不存在: $filePath');
+      }
+
+      final userInfo = await StorageManager.getUserInfo();
+      final userId = userInfo?['id'];
+
+      // 生成文件名
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final extension = filePath.split('.').last;
+      final finalFileName = fileName ?? '$timestamp.$extension';
+      final key = 'homework-mentor/${userId??'anonymous'}/videos/$finalFileName';
+
+      // 读取文件内容
+      final bytes = await file.readAsBytes();
+      final contentLength = bytes.length;
+
+      // 计算必要头并生成签名
+      final host = '$_bucketName.cos.$_region.myqcloud.com';
+      final date = getGMTDate();
+      final contentMd5 = base64Encode(md5.convert(bytes).bytes);
+      
+      // 根据文件扩展名确定视频的 MIME 类型
+      String contentType;
+      switch (extension.toLowerCase()) {
+        case 'mp4':
+          contentType = 'video/mp4';
+          break;
+        case 'avi':
+          contentType = 'video/x-msvideo';
+          break;
+        case 'mov':
+          contentType = 'video/quicktime';
+          break;
+        case 'wmv':
+          contentType = 'video/x-ms-wmv';
+          break;
+        case 'flv':
+          contentType = 'video/x-flv';
+          break;
+        case 'webm':
+          contentType = 'video/webm';
+          break;
+        case 'mkv':
+          contentType = 'video/x-matroska';
+          break;
+        default:
+          contentType = 'video/mp4'; // 默认使用 mp4
+      }
+
+      // 参与签名的 header 需要使用小写 key，并进行 URL 编码
+      final headersForSign = <String, String>{
+        'host': host,
+        'date': date,
+        'content-type': contentType,
+        'content-length': contentLength.toString(),
+        'content-md5': contentMd5,
+      };
+
+      final nowSec = DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+      final startTime = nowSec;
+      final endTime = nowSec + 3600; // 1 小时有效期
+
+      // 注意：签名中的 path 不包含 bucket，只有对象路径
+      final authorization = _generateSignature(
+        method: 'PUT',
+        path: '/$key',
+        headers: headersForSign,
+        queryParams: const {},
+        startTime: startTime,
+        endTime: endTime,
+      );
+
+      // 实际请求头（大小写不限，签名计算已用小写）
+      final headers = {
+        'Authorization': authorization,
+        'Content-Type': contentType,
+        'Content-Length': contentLength.toString(),
+        'Content-MD5': contentMd5,
+        'Date': date,
+        'Host': host,
+      };
+
+      // 构建 COS 上传 URL
+      final url = 'https://$host/$key';
+
+      // 发送上传请求
+      final response = await http.put(
+        Uri.parse(url),
+        headers: headers,
+        body: bytes,
+      );
+
+      if (response.statusCode == 200) {
+        // 返回可访问的视频 URL
+        String url = 'https://$_bucketName.cos.$_region.myqcloud.com/$key';
+        logger.i('上传视频成功: $url');
+        return url;
+      } else {
+        logger.e('上传视频失败: ${response.statusCode} - ${response.body}');
+        throw Exception('上传失败: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      logger.e('上传视频异常: $e');
+      throw Exception('上传视频异常: $e');
+    }
+  }
+
   /// 生成腾讯云 COS Authorization（V5）
   /// 参考文档：https://cloud.tencent.com/document/product/436/7778
   static String _generateSignature({

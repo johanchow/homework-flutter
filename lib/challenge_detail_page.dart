@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'services/api_service.dart';
 import 'api/exam_api.dart';
+import 'api/cos_api.dart';
 import 'entity/question.dart';
 import 'entity/exam.dart';
 import 'component/record_sound.dart';
@@ -426,7 +427,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                 onChanged: (bool? value) {
                   setState(() {
                     _checkboxStates[question.id] = value ?? false;
-                    _answers[question.id] = value.toString();
+                    _answers[question.id] = value;
                   });
                 },
                 activeColor: Colors.blue,
@@ -475,6 +476,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                 VideoPlayerWidget(videoUrl: _videoPaths[question.id]!),
                 const SizedBox(height: 12),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     ElevatedButton.icon(
                       onPressed: () => _recordVideo(question.id),
@@ -779,7 +781,8 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
     for (int i = 0; i < _questions.length; i++) {
       String questionId = _questions[i].id;
       if (_answers[questionId] == null || 
-          (_answers[questionId] is String && _answers[questionId].toString().trim().isEmpty)) {
+          (_answers[questionId] is String && _answers[questionId].toString().trim().isEmpty) || 
+          (_questions[i].type == QuestionType.checking && _answers[questionId] == false)) {
         unansweredQuestions.add(i + 1);
       }
     }
@@ -855,7 +858,12 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
   }
 
   void _submitAnswers() async {
-    print('submit answers: $_answers');
+    for (var question in _questions) {
+      if (question.type == QuestionType.show && _answers[question.id] != null) {
+        final videoUrl = await CosApi.uploadVideo(_answers[question.id]!);
+        _answers[question.id] = videoUrl;
+      }
+    }
     final answerJson = {
       'questions': _questions,
       'messages': {},

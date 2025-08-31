@@ -32,9 +32,9 @@ class ExamApi {
       response = await httpGet('/exam/list',queryParameters: {
         'page': 1, 'page_size': 10,
         // 今天0点
-        'plan_starttime_from': DateTime.now().toIso8601String().split('T')[0],
+        'plan_starttime__gte': DateTime.now().toIso8601String().split('T')[0],
         // 明天0点
-        'plan_starttime_to': DateTime.now().add(const Duration(days: 1)).toIso8601String().split('T')[0]
+        'plan_starttime__lt': DateTime.now().add(const Duration(days: 1)).toIso8601String().split('T')[0]
       });
       // 将API响应转换为Exam对象列表
     } catch (e, stack) {
@@ -54,7 +54,7 @@ class ExamApi {
       final response = await httpGet('/exam/list', queryParameters: {
         'page': 1, 'page_size': 10,
         // 今日0点
-        'plan_starttime_to': DateTime.now().toIso8601String().split('T')[0],
+        'plan_starttime__lt': DateTime.now().toIso8601String().split('T')[0],
       });
       
       print('response: ${response['data']}');
