@@ -46,6 +46,8 @@ dependencies:
   flutter_dotenv: ^5.1.0
   crypto: ^3.0.3
   image_picker: ^1.0.7
+  video_player: ^2.10.0
+  chewie: ^1.12.1   
   asr_plugin:
     path: ./asr_plugin
 

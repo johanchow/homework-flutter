@@ -172,7 +172,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
             ],
 
             // 如果是阅读题目，则把material用tts_button组件渲染，方便直接发音阅读
-            if (question.type.name == 'reading') ...[
+            if (question.type == QuestionType.reading) ...[
               Padding(
                 padding: const EdgeInsets.only(bottom: 12.0),
                 child: TtsButtonWidget(
@@ -420,27 +420,36 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
             border: Border.all(color: Colors.grey[300]!),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Row(
-            children: [
-              Checkbox(
-                value: _checkboxStates[question.id] ?? false,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _checkboxStates[question.id] = value ?? false;
-                    _answers[question.id] = value;
-                  });
-                },
-                activeColor: Colors.blue,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                '已完成',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                final currentValue = _checkboxStates[question.id] ?? false;
+                _checkboxStates[question.id] = !currentValue;
+                _answers[question.id] = !currentValue;
+              });
+            },
+            child: Row(
+              children: [
+                Checkbox(
+                  value: _checkboxStates[question.id] ?? false,
+                  onChanged: (bool? value) {
+                    setState(() {
+                      _checkboxStates[question.id] = value ?? false;
+                      _answers[question.id] = value ?? false;
+                    });
+                  },
+                  activeColor: Colors.blue,
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                const Text(
+                  '已完成',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
 
@@ -622,12 +631,13 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                     ],
                   ),
                 )
-              : Column(
-                  children: [
-                    // 挑战信息卡片
-                    Container(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Card(
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 挑战信息卡片
+                      Card(
                         elevation: 4,
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -664,52 +674,44 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                           ),
                         ),
                       ),
-                    ),
-                    
-                    // 题目列表
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '题目列表',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            if (_questions.isNotEmpty)
-                              ...List.generate(
-                                _questions.length,
-                                (index) => _buildQuestionCard(
-                                  _questions[index],
-                                  index,
-                                ),
-                              )
-                            else
-                              const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(32.0),
-                                  child: Text(
-                                    '暂无题目',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            
-                            const SizedBox(height: 10),
-                          ],
+                      
+                      const SizedBox(height: 24),
+                      
+                      // 题目列表
+                      const Text(
+                        '题目列表',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      
+                      if (_questions.isNotEmpty)
+                        ...List.generate(
+                          _questions.length,
+                          (index) => _buildQuestionCard(
+                            _questions[index],
+                            index,
+                          ),
+                        )
+                      else
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(32.0),
+                            child: Text(
+                              '暂无题目',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ),
+                      
+                      const SizedBox(height: 100), // 底部留白，避免被 bottomNavigationBar 遮挡
+                    ],
+                  ),
                 ),
       bottomNavigationBar: _isLoading || _error != null
           ? null
@@ -859,6 +861,10 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
 
   void _submitAnswers() async {
     for (var question in _questions) {
+      if ([QuestionType.talking, QuestionType.reading].contains(question.type) && _answers[question.id] != null) {
+        final audioUrl = await CosApi.uploadAudio(_answers[question.id]!);
+        _answers[question.id] = audioUrl;
+      }
       if (question.type == QuestionType.show && _answers[question.id] != null) {
         final videoUrl = await CosApi.uploadVideo(_answers[question.id]!);
         _answers[question.id] = videoUrl;
