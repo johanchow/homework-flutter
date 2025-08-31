@@ -50,6 +50,8 @@ dependencies:
   chewie: ^1.12.1   
   asr_plugin:
     path: ./asr_plugin
+  tts_plugin:
+    path: ./tts_plugin
 
 dev_dependencies:
   flutter_test:

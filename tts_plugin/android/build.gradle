@@ -1,0 +1,44 @@
+group 'com.tencent.cloud.tts.plugin.tts_plugin'
+version '1.0'
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.0'
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        flatDir {
+            dirs project(':tts_plugin').files('libs')
+        }
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.tencent.cloud.tts.plugin.tts_plugin'
+    compileSdkVersion 34
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        minSdkVersion 19
+        compileSdkVersion 34
+    }
+}
+
+dependencies {
+    implementation(name: 'libqcloudtts-release', ext: 'aar')
+}

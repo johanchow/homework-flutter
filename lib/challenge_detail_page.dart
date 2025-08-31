@@ -10,7 +10,8 @@ import 'component/record_sound.dart';
 import 'component/link_preview.dart';
 import 'component/video_player_widget.dart';
 import 'component/chat_box.dart';
-import 'component/tts_button.dart';
+import 'component/tts_widget.dart';
+// import 'component/tts_button.dart';
 
 class ChallengeDetailPage extends StatefulWidget {
   final String challengeId;
@@ -175,9 +176,12 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
             if (question.type == QuestionType.reading) ...[
               Padding(
                 padding: const EdgeInsets.only(bottom: 12.0),
-                child: TtsButtonWidget(
-                  sentence: (question.material ?? '')
+                child: TTSWidget(
+                  text: (question.material ?? ''),
                 ),
+                // child: TtsButtonWidget(
+                //   sentence: (question.material ?? ''),
+                // ),
               ),
             ],
 
