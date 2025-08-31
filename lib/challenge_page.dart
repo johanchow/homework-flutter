@@ -29,7 +29,6 @@ class _ChallengePageState extends State<ChallengePage> {
 
     print('ChallengePage loadData');
     try {
-      // final challenges = await ApiService.getTodayChallenges();
       final challenges = await ExamApi.listTodayExams();
       setState(() {
         _challenges = challenges;
