@@ -179,9 +179,6 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                 child: TTSWidget(
                   text: (question.material ?? ''),
                 ),
-                // child: TtsButtonWidget(
-                //   sentence: (question.material ?? ''),
-                // ),
               ),
             ],
 
@@ -429,7 +426,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
               setState(() {
                 final currentValue = _checkboxStates[question.id] ?? false;
                 _checkboxStates[question.id] = !currentValue;
-                _answers[question.id] = !currentValue;
+                _answers[question.id] = !currentValue ? 'FINISHED' : '';
               });
             },
             child: Row(
@@ -439,7 +436,7 @@ class _ChallengeDetailPageState extends State<ChallengeDetailPage> {
                   onChanged: (bool? value) {
                     setState(() {
                       _checkboxStates[question.id] = value ?? false;
-                      _answers[question.id] = value ?? false;
+                      _answers[question.id] = value! ? 'FINISHED' : '';
                     });
                   },
                   activeColor: Colors.blue,
